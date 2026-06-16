@@ -879,6 +879,25 @@
   </style>
 </head>
 <body>
+  <!-- Login Overlay -->
+  <div id="auth-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;">
+    <div style="max-width:360px;margin:120px auto;padding:32px;">
+      <div style="text-align:center;margin-bottom:32px;">
+        <div style="width:48px;height:48px;background:#0B62DB;border-radius:12px;margin:0 auto 16px;display:grid;place-items:center;"><svg width="24" height="24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-5"/><rect x="3" y="4" width="18" height="16" rx="3"/></svg></div>
+        <h1 style="font-size:22px;font-weight:700;margin:0;">SignFlow</h1>
+        <p style="color:#6B6B6B;font-size:14px;margin:8px 0 0;">登录后数据多设备同步</p>
+      </div>
+      <div id="auth-form">
+        <input id="auth-email" type="email" placeholder="邮箱" style="width:100%;height:44px;border:1px solid #E8E5E1;border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:10px;outline:none;box-sizing:border-box;">
+        <input id="auth-password" type="password" placeholder="密码" style="width:100%;height:44px;border:1px solid #E8E5E1;border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:10px;outline:none;box-sizing:border-box;">
+        <input id="auth-name" type="text" placeholder="昵称（仅注册需要）" style="width:100%;height:44px;border:1px solid #E8E5E1;border-radius:8px;padding:0 12px;font-size:14px;margin-bottom:16px;outline:none;box-sizing:border-box;">
+        <button id="auth-login-btn" style="width:100%;height:44px;background:#0B62DB;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">登录</button>
+        <button id="auth-register-btn" style="width:100%;height:44px;background:#F8F7F6;color:#1A1A1A;border:1px solid #E8E5E1;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:16px;">注册</button>
+        <p id="auth-error" style="color:#c93c37;font-size:13px;text-align:center;margin:0;display:none;"></p>
+        <p style="color:#6B6B6B;font-size:12px;text-align:center;margin:16px 0 0;">也可以 <a href="#" id="auth-skip" style="color:#0B62DB;">跳过登录</a>（数据仅保存在本地）</p>
+      </div>
+    </div>
+  </div>
   <div id="app" v-cloak>
     <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
       <aside class="sidebar">
@@ -1687,7 +1706,7 @@
           <section class="panel p-4 space-y-4">
             <div>
               <h3 class="text-lg font-bold">备份 / 恢复</h3>
-              <p class="text-sm text-[#6B6B6B]">数据仍保存在浏览器 localStorage，建议重要批次前下载一份 JSON 备份。</p>
+              <p class="text-sm text-[#6B6B6B]">数据已同步到云端，支持多设备访问。建议重要批次前仍下载一份 JSON 备份。</p>
             </div>
             <div class="quick-strip">
               <button class="btn" @click="exportBackup">下载 JSON 备份</button>
@@ -1697,6 +1716,16 @@
               <textarea class="input min-h-[120px]" v-model="restoreText" placeholder="粘贴之前下载的 JSON 内容"></textarea>
             </label>
             <button class="btn btn-danger" @click="restoreBackup">恢复备份</button>
+          </section>
+
+          <section class="panel p-4 space-y-3">
+            <div>
+              <h3 class="text-lg font-bold">账号</h3>
+              <p class="text-sm text-[#6B6B6B]">登录后数据自动同步到云端，支持多设备访问。</p>
+            </div>
+            <div class="quick-strip">
+              <button class="btn btn-danger" @click="handleLogout">退出登录</button>
+            </div>
           </section>
         </section>
       </main>
@@ -1969,6 +1998,128 @@
   </div>
 
   <script>
+    // === SignFlow Cloud Sync Layer ===
+    const API_BASE = "https://cola-dispatch.marswave-543.workers.dev/signflow-api-91481e";
+    const AUTH_TOKEN_KEY = "signflow.auth.token";
+
+    const SyncLayer = {
+      token: localStorage.getItem(AUTH_TOKEN_KEY) || null,
+      syncing: false,
+      _debounceTimer: null,
+
+      isLoggedIn() { return !!this.token; },
+
+      async login(email, password) {
+        const res = await fetch(`${API_BASE}/api/_auth/login`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({email, password}) });
+        const data = await res.json();
+        if (data.ok && data.token) { this.token = data.token; localStorage.setItem(AUTH_TOKEN_KEY, data.token); return {ok:true}; }
+        return {ok:false, error: data.error || 'Login failed'};
+      },
+
+      async register(email, password, name) {
+        const res = await fetch(`${API_BASE}/api/_auth/register`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({email, password, name}) });
+        const data = await res.json();
+        if (data.ok && data.token) { this.token = data.token; localStorage.setItem(AUTH_TOKEN_KEY, data.token); return {ok:true}; }
+        return {ok:false, error: data.error || 'Registration failed'};
+      },
+
+      async checkSession() {
+        if (!this.token) return false;
+        try {
+          const res = await fetch(`${API_BASE}/api/_auth/me`, { headers: {'Authorization': `Bearer ${this.token}`} });
+          const data = await res.json();
+          return data.ok;
+        } catch(e) { return false; }
+      },
+
+      async fetchState() {
+        if (!this.token) return null;
+        try {
+          const res = await fetch(`${API_BASE}/api/state`, { headers: {'Authorization': `Bearer ${this.token}`} });
+          const data = await res.json();
+          return data.ok ? data.data : null;
+        } catch(e) { return null; }
+      },
+
+      pushState(state) {
+        if (!this.token || this.syncing) return;
+        clearTimeout(this._debounceTimer);
+        this._debounceTimer = setTimeout(() => {
+          this.syncing = true;
+          fetch(`${API_BASE}/api/state`, { method:'PUT', headers:{'Authorization':`Bearer ${this.token}`,'Content-Type':'application/json'}, body: JSON.stringify({data: state}) })
+            .catch(()=>{})
+            .finally(()=>{ this.syncing = false; });
+        }, 1500);
+      },
+
+      async fetchAdvisor() {
+        if (!this.token) return null;
+        try {
+          const res = await fetch(`${API_BASE}/api/advisor`, { headers: {'Authorization': `Bearer ${this.token}`} });
+          const data = await res.json();
+          return data.ok ? data.data : null;
+        } catch(e) { return null; }
+      },
+
+      pushAdvisor(decisions) {
+        if (!this.token) return;
+        fetch(`${API_BASE}/api/advisor`, { method:'PUT', headers:{'Authorization':`Bearer ${this.token}`,'Content-Type':'application/json'}, body: JSON.stringify({data: decisions}) }).catch(()=>{});
+      },
+
+      logout() { this.token = null; localStorage.removeItem(AUTH_TOKEN_KEY); }
+    };
+
+    // Auth UI logic
+    (function initAuth() {
+      const overlay = document.getElementById('auth-overlay');
+      const errorEl = document.getElementById('auth-error');
+      const showError = (msg) => { errorEl.textContent = msg; errorEl.style.display = 'block'; };
+      const hideError = () => { errorEl.style.display = 'none'; };
+
+      if (!SyncLayer.isLoggedIn()) {
+        overlay.style.display = 'block';
+      } else {
+        SyncLayer.checkSession().then(valid => {
+          if (!valid) { SyncLayer.logout(); overlay.style.display = 'block'; }
+        });
+      }
+
+      document.getElementById('auth-login-btn').onclick = async () => {
+        hideError();
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value;
+        if (!email || !password) { showError('请填写邮箱和密码'); return; }
+        const result = await SyncLayer.login(email, password);
+        if (result.ok) { overlay.style.display = 'none'; window.location.reload(); }
+        else showError(result.error);
+      };
+
+      document.getElementById('auth-register-btn').onclick = async () => {
+        hideError();
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value;
+        const name = document.getElementById('auth-name').value.trim() || 'User';
+        if (!email || !password) { showError('请填写邮箱和密码'); return; }
+        if (password.length < 6) { showError('密码至少6位'); return; }
+        const result = await SyncLayer.register(email, password, name);
+        if (result.ok) { overlay.style.display = 'none'; window.location.reload(); }
+        else showError(result.error);
+      };
+
+      document.getElementById('auth-skip').onclick = (e) => {
+        e.preventDefault();
+        overlay.style.display = 'none';
+      };
+
+      // Enter key support
+      ['auth-email','auth-password','auth-name'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') document.getElementById('auth-login-btn').click();
+        });
+      });
+    })();
+    // === End Sync Layer ===
+
     const { createApp } = Vue;
     const STORAGE_KEY = "signflow.local.v1";
     const SIDEBAR_COLLAPSED_KEY = "sidebar_collapsed";
@@ -2680,6 +2831,7 @@
           deep: true,
           handler(value) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+            if (!this._skipSync) SyncLayer.pushState(value);
           }
         },
         sidebarCollapsed(value) {
@@ -2689,6 +2841,7 @@
           deep: true,
           handler(value) {
             localStorage.setItem(ADVISOR_DECISIONS_KEY, JSON.stringify(value));
+            SyncLayer.pushAdvisor(value);
           }
         }
       },
@@ -2698,6 +2851,28 @@
         this.ensurePipelines();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
         this.refreshIcons();
+        // Cloud sync: load from server if logged in
+        if (SyncLayer.isLoggedIn()) {
+          SyncLayer.fetchState().then(cloudData => {
+            if (cloudData && cloudData.bloggers) {
+              this._skipSync = true;
+              this.state = cloudData;
+              this.ensureBloggerDefaults();
+              this.ensureDebriefDefaults();
+              this.ensurePipelines();
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+              this.$nextTick(() => { this._skipSync = false; this.refreshIcons(); });
+            } else {
+              // First time login: push local data to cloud
+              SyncLayer.pushState(this.state);
+            }
+          });
+          SyncLayer.fetchAdvisor().then(cloudAdvisor => {
+            if (cloudAdvisor && Object.keys(cloudAdvisor).length) {
+              this.advisorDecisions = cloudAdvisor;
+            }
+          });
+        }
       },
       updated() {
         this.refreshIcons();
@@ -2831,6 +3006,12 @@
         },
         resetAdvisorDecisions() {
           this.advisorDecisions = {};
+        },
+        handleLogout() {
+          if (confirm('退出后本地数据仍保留，但不再同步到云端。确认退出？')) {
+            SyncLayer.logout();
+            window.location.reload();
+          }
         },
         pipelineStepClass(bloggerId, step) {
           return {
