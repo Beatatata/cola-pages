@@ -1,0 +1,3825 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SignFlow · 博主签约管理</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230B62DB'/%3E%3Cpath d='M18 16h24l8 8v24H18z' fill='white'/%3E%3Cpath d='M42 16v10h10' fill='%23EAF2FF'/%3E%3Cpath d='M25 38l5 5 11-14' fill='none' stroke='%230B62DB' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --sf-blue: #0B62DB;
+      --sf-text: #1A1A1A;
+      --sf-muted: #6B6B6B;
+      --sf-line: #E8E5E1;
+      --sf-soft: #F8F7F6;
+      --sf-yellow: #F8D66D;
+      --sf-green: #89D48B;
+      --sf-sky: #8BC6F8;
+      --sf-red: #F08A84;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #FFFFFF;
+      color: var(--sf-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    [v-cloak] {
+      display: none;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+      background: linear-gradient(90deg, #FAFAF9 0, #FAFAF9 248px, #FFFFFF 248px, #FFFFFF 100%);
+      transition: grid-template-columns .2s ease, background .2s ease;
+    }
+
+    .app-shell.sidebar-collapsed {
+      grid-template-columns: 64px minmax(0, 1fr);
+      background: linear-gradient(90deg, #FAFAF9 0, #FAFAF9 64px, #FFFFFF 64px, #FFFFFF 100%);
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--sf-line);
+      padding: 22px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      width: 248px;
+      transition: width .2s ease, padding .2s ease;
+    }
+
+    .sidebar-collapsed .sidebar {
+      width: 64px;
+      padding: 18px 10px;
+    }
+
+    .sidebar-label,
+    .sidebar-title,
+    .sidebar-meta,
+    .sidebar-panel {
+      transition: opacity .16s ease, transform .16s ease;
+    }
+
+    .sidebar-collapsed .sidebar-label,
+    .sidebar-collapsed .sidebar-title,
+    .sidebar-collapsed .sidebar-meta,
+    .sidebar-collapsed .sidebar-panel {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-6px);
+      width: 0;
+      height: 0;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    .sidebar-toggle {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 8px;
+    }
+
+    .nav-button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 42px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: #3B3B3B;
+      transition: background .16s ease, color .16s ease;
+    }
+
+    .sidebar-collapsed .nav-button {
+      justify-content: center;
+      padding: 10px 0;
+    }
+
+    .sidebar-collapsed .nav-text {
+      display: none;
+    }
+
+    .icon {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+      stroke-width: 2;
+      color: currentColor;
+    }
+
+    .icon-md {
+      width: 20px;
+      height: 20px;
+    }
+
+    .icon-lg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .nav-button:hover {
+      background: #F1EFED;
+    }
+
+    .nav-button.active {
+      background: #EAF2FF;
+      color: var(--sf-blue);
+      font-weight: 650;
+    }
+
+    .main {
+      padding: 24px 32px 44px;
+      min-width: 0;
+    }
+
+    .panel {
+      background: var(--sf-soft);
+      border: 1px solid var(--sf-line);
+      border-radius: 10px;
+    }
+
+    .card {
+      background: #FFFFFF;
+      border: 1px solid var(--sf-line);
+      border-radius: 10px;
+    }
+
+    .input {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--sf-line);
+      border-radius: 8px;
+      background: #FFFFFF;
+      padding: 9px 11px;
+      outline: none;
+      color: var(--sf-text);
+    }
+
+    .input:focus {
+      border-color: rgba(11, 98, 219, .55);
+      box-shadow: 0 0 0 3px rgba(11, 98, 219, .12);
+    }
+
+    textarea.input {
+      min-height: 76px;
+      resize: vertical;
+    }
+
+    .btn {
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 8px;
+      padding: 8px 13px;
+      border: 1px solid var(--sf-line);
+      background: #FFFFFF;
+      color: var(--sf-text);
+      transition: transform .12s ease, background .16s ease, border .16s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: #F6F5F3;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: var(--sf-blue);
+      border-color: var(--sf-blue);
+      color: #FFFFFF;
+      font-weight: 650;
+    }
+
+    .btn-primary:hover {
+      background: #0956C2;
+    }
+
+    .btn-quiet {
+      background: transparent;
+      border-color: transparent;
+      color: var(--sf-muted);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 12px;
+      line-height: 1.2;
+      background: #F1EFED;
+      color: #55504A;
+      border: 1px solid rgba(232, 229, 225, .95);
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .progress-track {
+      height: 8px;
+      border-radius: 999px;
+      background: #ECE9E4;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--sf-blue);
+      transition: width .2s ease;
+    }
+
+    .pipeline-table {
+      overflow-x: auto;
+      border: 1px solid var(--sf-line);
+      border-radius: 10px;
+      background: #FFFFFF;
+    }
+
+    .pipeline-row {
+      min-width: 1040px;
+      display: grid;
+      grid-template-columns: 220px repeat(10, 1fr) 92px;
+      align-items: stretch;
+      border-bottom: 1px solid var(--sf-line);
+    }
+
+    .pipeline-row:last-child {
+      border-bottom: 0;
+    }
+
+    .pipeline-head {
+      background: #FAFAF9;
+      color: var(--sf-muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .pipeline-person {
+      padding: 14px;
+      border-right: 1px solid var(--sf-line);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .pipeline-step {
+      position: relative;
+      min-height: 92px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 6px;
+      border-right: 1px solid #F1EFED;
+    }
+
+    .pipeline-step::before {
+      content: "";
+      position: absolute;
+      top: 34px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #E5E1DC;
+    }
+
+    .pipeline-head .pipeline-step::before {
+      display: none;
+    }
+
+    .pipeline-step:first-of-type::before {
+      left: 50%;
+    }
+
+    .pipeline-step:nth-last-child(2)::before {
+      right: 50%;
+    }
+
+    .pipeline-node {
+      position: relative;
+      z-index: 1;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 2px solid #D8D3CE;
+      background: #FFFFFF;
+      color: #8A8178;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      transition: transform .12s ease, border .16s ease, background .16s ease;
+    }
+
+    .pipeline-node:hover {
+      transform: translateY(-1px);
+    }
+
+    .pipeline-step.done::before {
+      background: #8CB9FF;
+    }
+
+    .pipeline-step.done .pipeline-node {
+      background: var(--sf-blue);
+      border-color: var(--sf-blue);
+      color: #FFFFFF;
+    }
+
+    .pipeline-step.overdue .pipeline-node {
+      background: #FFE9E7;
+      border-color: #DF5A50;
+      color: #A9362F;
+    }
+
+    .pipeline-step.current .pipeline-node {
+      box-shadow: 0 0 0 4px rgba(11, 98, 219, .12);
+    }
+
+    .pipeline-step-label {
+      position: absolute;
+      top: 54px;
+      left: 4px;
+      right: 4px;
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.2;
+      color: var(--sf-muted);
+    }
+
+    .action-banner {
+      border-radius: 10px;
+      border: 1px solid var(--sf-line);
+      padding: 14px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .banner-urgent {
+      background: #FFF1EF;
+      border-color: #F1A29D;
+    }
+
+    .banner-schedule {
+      background: #F0F6FF;
+      border-color: #A8C9FF;
+    }
+
+    .banner-clear {
+      background: #F0FAF2;
+      border-color: #A7D7AF;
+    }
+
+    .tab-button {
+      min-height: 36px;
+      padding: 7px 11px;
+      border-radius: 8px;
+      color: var(--sf-muted);
+    }
+
+    .tab-button.active {
+      background: #EAF2FF;
+      color: var(--sf-blue);
+      font-weight: 700;
+    }
+
+    .link-row,
+    .import-row {
+      display: grid;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .link-row {
+      grid-template-columns: minmax(120px, .65fr) minmax(180px, 1fr) auto;
+    }
+
+    .import-row {
+      grid-template-columns: minmax(150px, .7fr) minmax(130px, .6fr) minmax(100px, .4fr) 90px;
+    }
+
+    .pipeline-compact {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+      gap: 6px;
+    }
+
+    .pipeline-mini-node {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 5px;
+      padding: 7px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--sf-line);
+      background: #F8F7F6;
+      color: var(--sf-muted);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: border-color .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+    }
+
+    .pipeline-mini-node:hover {
+      border-color: #A8C9FF;
+      box-shadow: 0 0 0 3px rgba(11, 98, 219, .10);
+      color: var(--sf-blue);
+    }
+
+    .pipeline-mini-node:focus-visible {
+      outline: 2px solid rgba(11, 98, 219, .45);
+      outline-offset: 2px;
+    }
+
+    .pipeline-mini-node .icon {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+    }
+
+    .pipeline-mini-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pipeline-mini-status {
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 700;
+      opacity: .82;
+    }
+
+    .pipeline-mini-node.done {
+      background: #EAF2FF;
+      border-color: #A8C9FF;
+      color: var(--sf-blue);
+    }
+
+    .pipeline-mini-node.overdue {
+      background: #FFE9E7;
+      border-color: #F1A29D;
+      color: #A9362F;
+    }
+
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: 74px repeat(7, minmax(122px, 1fr));
+      overflow-x: auto;
+      border: 1px solid var(--sf-line);
+      border-radius: 10px;
+      background: #FFFFFF;
+    }
+
+    .schedule-cell,
+    .schedule-head,
+    .time-cell {
+      min-height: 76px;
+      border-right: 1px solid var(--sf-line);
+      border-bottom: 1px solid var(--sf-line);
+      padding: 9px;
+    }
+
+    .schedule-head {
+      min-height: 72px;
+      background: #FAFAF9;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .time-cell {
+      background: #FAFAF9;
+      color: var(--sf-muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .schedule-cell {
+      background: #FFFFFF;
+      cursor: pointer;
+      transition: background .16s ease;
+    }
+
+    .schedule-cell:hover {
+      background: #F8FAFF;
+    }
+
+    .schedule-cell.is-full:hover {
+      background: #FFF4F2;
+    }
+
+    .schedule-block {
+      position: relative;
+      height: 100%;
+      min-height: 54px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, .06);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 5px;
+      color: #1F1F1F;
+      cursor: grab;
+      transition: background .3s ease, border .3s ease, opacity .16s ease;
+    }
+
+    .schedule-block:active {
+      cursor: grabbing;
+    }
+
+    .schedule-edit-btn {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(0, 0, 0, .08);
+      background: rgba(255, 255, 255, .84);
+      color: #55504A;
+      opacity: 0;
+      transform: translateY(-2px);
+      transition: opacity .16s ease, transform .16s ease, background .16s ease;
+    }
+
+    .schedule-block:hover .schedule-edit-btn {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .schedule-pending {
+      background: #FFF7D7;
+      border-color: #F4D570;
+    }
+
+    .schedule-talked {
+      background: #E8F5E9;
+      border-color: #4CAF50;
+    }
+
+    .schedule-confirmed {
+      background: #E8F8E8;
+      border-color: #9ED99E;
+    }
+
+    .schedule-completed {
+      background: #E6F3FF;
+      border-color: #96CCFA;
+    }
+
+    .schedule-cancelled {
+      background: #FFE9E7;
+      border-color: #F1A29D;
+    }
+
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(190px, 1fr));
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .kanban-column {
+      min-height: 420px;
+      background: #FAFAF9;
+      border: 1px solid var(--sf-line);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .kanban-card {
+      cursor: grab;
+    }
+
+    .action-card {
+      border-left: 4px solid var(--sf-line);
+    }
+
+    .card.completed,
+    .action-card.completed,
+    .follow-card.completed,
+    .advisor-card.adopted {
+      opacity: .62;
+    }
+
+    .completed-mark {
+      color: #2A6E2C;
+      font-weight: 700;
+    }
+
+    .action-urgent {
+      border-left-color: var(--sf-red);
+      background: #FFF7F6;
+    }
+
+    .action-today {
+      border-left-color: var(--sf-yellow);
+      background: #FFFCF0;
+    }
+
+    .action-week {
+      border-left-color: var(--sf-blue);
+      background: #F7FAFF;
+    }
+
+    .mini-btn {
+      min-height: 30px;
+      padding: 5px 9px;
+      border-radius: 7px;
+      font-size: 12px;
+    }
+
+    .quick-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn-danger {
+      border-color: #F1A29D;
+      color: #A9362F;
+      background: #FFF7F6;
+    }
+
+    .btn-danger:hover {
+      background: #FFE9E7;
+    }
+
+    .timeline-list {
+      position: relative;
+      display: grid;
+      gap: 14px;
+      padding-left: 22px;
+    }
+
+    .timeline-list::before {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: #E5E1DC;
+    }
+
+    .timeline-item {
+      position: relative;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: -21px;
+      top: 18px;
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 3px solid #FFFFFF;
+      background: var(--sf-blue);
+      box-shadow: 0 0 0 1px #A8C9FF;
+    }
+
+    .timeline-detail {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .22s ease, opacity .18s ease;
+      opacity: 0;
+    }
+
+    .timeline-detail.open {
+      max-height: 360px;
+      opacity: 1;
+    }
+
+    .pipeline-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .pipeline-list-card {
+      display: grid;
+      grid-template-columns: 4px minmax(0, 1fr);
+      overflow: hidden;
+    }
+
+    .pipeline-status-strip {
+      min-height: 100%;
+      background: #D8D3CE;
+    }
+
+    .pipeline-status-strip.signed {
+      background: #4CAF50;
+    }
+
+    .pipeline-status-strip.active {
+      background: var(--sf-yellow);
+    }
+
+    .pipeline-status-strip.rejected {
+      background: var(--sf-red);
+    }
+
+    .pipeline-progress-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+      gap: 6px;
+    }
+
+    .advisor-section {
+      display: grid;
+      gap: 10px;
+    }
+
+    .advisor-card {
+      transition: opacity .18s ease, background .16s ease, border .16s ease;
+    }
+
+    .advisor-card.adopted {
+      background: #F0FAF2;
+      border-color: #A7D7AF;
+    }
+
+    .advisor-card.ignored {
+      display: none;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(26, 26, 26, .22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 20;
+    }
+
+    .modal {
+      width: min(760px, 100%);
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      background: #FFFFFF;
+      border: 1px solid var(--sf-line);
+      border-radius: 12px;
+      box-shadow: 0 24px 80px rgba(20, 20, 20, .18);
+    }
+
+    .mobile-only {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .app-shell {
+        display: block;
+        background: #FFFFFF;
+      }
+
+      .app-shell.sidebar-collapsed {
+        background: #FFFFFF;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        width: 100%;
+        border-right: 0;
+        border-bottom: 1px solid var(--sf-line);
+        padding: 16px;
+      }
+
+      .sidebar-collapsed .sidebar {
+        width: 100%;
+        padding: 16px;
+      }
+
+      .nav-list {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .nav-button {
+        justify-content: center;
+        padding: 9px 6px;
+      }
+
+      .main {
+        padding: 18px 16px 32px;
+      }
+
+      .link-row,
+      .import-row {
+        grid-template-columns: 1fr;
+      }
+
+      .desktop-hint {
+        display: none;
+      }
+
+      .mobile-only {
+        display: block;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .nav-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .main-title {
+        font-size: 24px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <div class="app-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+      <aside class="sidebar">
+        <div class="mb-7">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="sidebar-label text-[13px] text-[#6B6B6B] mb-1">SignFlow</div>
+              <h1 class="sidebar-title text-[22px] font-bold leading-tight">博主签约管理</h1>
+            </div>
+            <button class="btn btn-quiet sidebar-toggle" type="button" :title="sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'" @click="toggleSidebar">
+              <i class="icon" :data-lucide="sidebarCollapsed ? 'panel-left-open' : 'panel-left-close'"></i>
+            </button>
+          </div>
+          <div class="sidebar-meta mt-3 flex items-center gap-2 text-[12px] text-[#6B6B6B]">
+            <span class="status-dot" style="background: var(--sf-blue)"></span>
+            <span>本地自动保存</span>
+          </div>
+        </div>
+
+        <nav class="nav-list space-y-1">
+          <button
+            v-for="item in navItems"
+            :key="item.id"
+            class="nav-button"
+            :class="{ active: activeView === item.id }"
+            @click="activeView = item.id"
+          >
+            <i class="icon" :data-lucide="item.icon"></i>
+            <span class="nav-text">{{ item.label }}</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-panel mt-8 panel p-3 desktop-hint">
+          <div class="text-sm font-semibold mb-2">今日节奏</div>
+          <div class="text-[13px] text-[#6B6B6B] leading-6">
+            今日排期 {{ todaySchedules.length }}/5<br />
+            待处理动作 {{ todayActionItems.length }} 个<br />
+            已签 {{ signedCount }} / 目标 8 人
+          </div>
+        </div>
+
+        <div class="sidebar-panel mt-4 flex flex-col gap-2 desktop-hint">
+          <button class="btn btn-quiet justify-start" @click="resetDemoData">重置示例数据</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div class="text-sm text-[#6B6B6B] mb-1">{{ viewKicker }}</div>
+            <h2 class="main-title text-[30px] font-bold leading-tight">{{ currentTitle }}</h2>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="btn" @click="openBloggerForm()"><i class="icon" data-lucide="plus"></i>新增博主</button>
+            <button class="btn btn-primary" @click="activeView = 'schedule'"><i class="icon" data-lucide="calendar"></i>安排约谈</button>
+          </div>
+        </header>
+
+        <section v-if="activeView === 'dashboard'" class="space-y-5">
+          <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <article class="card p-4">
+              <div class="text-sm text-[#6B6B6B]">待沟通</div>
+              <div class="mt-2 text-3xl font-bold">{{ countStage('待沟通') }}</div>
+              <div class="mt-3 progress-track"><div class="progress-fill" :style="{ width: stagePercent('待沟通') + '%' }"></div></div>
+            </article>
+            <article class="card p-4">
+              <div class="text-sm text-[#6B6B6B]">已约未确认</div>
+              <div class="mt-2 text-3xl font-bold">{{ pendingSchedules.length }}</div>
+              <div class="mt-3 text-sm text-[#6B6B6B]">需要确认时间与准备材料</div>
+            </article>
+            <article class="card p-4">
+              <div class="text-sm text-[#6B6B6B]">今日待跟进</div>
+              <div class="mt-2 text-3xl font-bold" :class="urgentActionCount ? 'text-[#A9362F]' : ''">{{ todayActionItems.length }}</div>
+              <div class="mt-3 text-sm text-[#6B6B6B]">{{ urgentActionCount }} 个紧急动作</div>
+            </article>
+            <article class="card p-4">
+              <div class="text-sm text-[#6B6B6B]">已签约</div>
+              <div class="mt-2 text-3xl font-bold text-[#0B62DB]">{{ signedCount }}</div>
+              <div class="mt-3 progress-track"><div class="progress-fill" :style="{ width: Math.min(100, signedCount / 8 * 100) + '%' }"></div></div>
+            </article>
+          </div>
+
+          <div class="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+            <section class="panel p-4">
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 class="text-lg font-bold">本周数据统计</h3>
+                  <p class="text-sm text-[#6B6B6B]">{{ weekRangeText }}</p>
+                </div>
+                <button class="btn" @click="activeView = 'schedule'"><i class="icon" data-lucide="calendar"></i>查看日历</button>
+              </div>
+              <div class="grid gap-3 md:grid-cols-3">
+                <div class="card p-4">
+                  <div class="text-sm text-[#6B6B6B]">本周约谈</div>
+                  <div class="mt-1 text-2xl font-bold">{{ weekSchedules.length }}</div>
+                </div>
+                <div class="card p-4">
+                  <div class="text-sm text-[#6B6B6B]">今日排期</div>
+                  <div class="mt-1 text-2xl font-bold">{{ todaySchedules.length }}/5</div>
+                </div>
+                <div class="card p-4">
+                  <div class="text-sm text-[#6B6B6B]">待跟进</div>
+                  <div class="mt-1 text-2xl font-bold">{{ dashboardFollowItems.length }}</div>
+                </div>
+              </div>
+
+              <div class="mt-4 grid gap-3">
+                <div class="card p-4">
+                  <div class="mb-3 text-sm font-semibold">阶段分布</div>
+                  <div class="space-y-3">
+                    <div v-for="stage in stages" :key="stage">
+                      <div class="flex items-center justify-between text-sm mb-1">
+                        <span>{{ stage }}</span>
+                        <span class="text-[#6B6B6B]">{{ countStage(stage) }}</span>
+                      </div>
+                      <div class="progress-track"><div class="progress-fill" :style="{ width: stagePercent(stage) + '%' }"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel p-4">
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 class="text-lg font-bold">今日排期时间轴</h3>
+                  <p class="text-sm text-[#6B6B6B]">只显示已有预约时段</p>
+                </div>
+                <button class="btn mini-btn" @click="activeView = 'schedule'">排期</button>
+              </div>
+              <div v-if="todaySchedules.length" class="timeline-list">
+                <button
+                  v-for="item in todaySchedules"
+                  :key="item.id"
+                  class="timeline-item card p-3 text-left hover:bg-[#FAFAF9]"
+                  @click="activeView = 'schedule'"
+                >
+                  <span class="timeline-dot"></span>
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="font-semibold">{{ timeLabel(item.timeSlot) }}</div>
+                      <div class="mt-1 text-sm text-[#6B6B6B]">{{ bloggerName(item.bloggerId) }}</div>
+                    </div>
+                    <span class="pill">{{ scheduleStatusLabel(item.status) }}</span>
+                  </div>
+                </button>
+              </div>
+              <div v-else class="card p-4 text-sm text-[#6B6B6B]">今天还没有排期。</div>
+            </section>
+          </div>
+
+          <section class="panel p-4">
+            <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h3 class="text-lg font-bold">今日待跟进</h3>
+                <p class="text-sm text-[#6B6B6B]">同一个博主只保留最优先的一条动作。</p>
+              </div>
+              <div class="quick-strip">
+                <button class="btn" @click="activeView = 'bloggers'; filters.followupOnly = true">
+                  <i class="icon" data-lucide="search"></i>只看待跟进
+                </button>
+                <label class="pill cursor-pointer">
+                  <input type="checkbox" class="mr-2 accent-[#0B62DB]" v-model="filters.showCompletedFollowups" />
+                  显示已完成
+                </label>
+              </div>
+            </div>
+            <div v-if="dashboardFollowItems.length" class="space-y-2">
+              <article
+                v-for="item in dashboardFollowItems"
+                :key="item.id"
+                class="card action-card follow-card p-3"
+                :class="[actionClass(item), { completed: item.completed }]"
+              >
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <button class="text-left min-w-0" @click="jumpToReminder(item)">
+                    <div class="flex items-center gap-2 font-semibold leading-snug">
+                      <i v-if="item.icon" class="icon" :data-lucide="item.icon"></i>
+                      <span>{{ item.title }}</span>
+                    </div>
+                    <div class="mt-1 text-sm text-[#6B6B6B]">{{ item.detail }}</div>
+                  </button>
+                  <div class="quick-strip shrink-0">
+                    <span v-if="item.completed" class="pill completed-mark"><i class="icon" data-lucide="check-circle"></i>已完成</span>
+                    <span v-else class="pill" :class="item.level === 'urgent' ? 'bg-[#FFE9E7] text-[#A9362F]' : ''">{{ item.levelText }}</span>
+                    <button v-if="!item.completed" class="btn mini-btn" @click.stop="completeActionItem(item)">完成</button>
+                    <button v-if="!item.completed" class="btn mini-btn" @click.stop="snoozeActionItem(item, 1)">明天</button>
+                    <button class="btn mini-btn" @click.stop="openDebriefFor(item.bloggerId)">复盘</button>
+                  </div>
+                </div>
+              </article>
+            </div>
+            <div v-else class="card p-4 text-sm text-[#6B6B6B]">今天没有必须处理的跟进动作。</div>
+          </section>
+        </section>
+
+        <section v-if="activeView === 'schedule'" class="space-y-5">
+          <div class="panel p-4">
+            <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              <div>
+                <h3 class="text-lg font-bold">周视图排期</h3>
+                <p class="text-sm text-[#6B6B6B]">每天最多 5 个约谈格，10:00 到 22:00，每格 1 小时。</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button class="btn" @click="moveWeek(-1)">上一周</button>
+                <button class="btn" @click="goThisWeek">本周</button>
+                <button class="btn" @click="moveWeek(1)">下一周</button>
+              </div>
+            </div>
+
+            <div class="mt-4 grid gap-4 xl:grid-cols-[220px_1fr]">
+              <aside class="card p-3">
+                <div class="mb-3 flex items-center justify-between">
+                  <div class="font-semibold">待排期</div>
+                  <span class="pill">{{ unscheduledBloggers.length }}</span>
+                </div>
+                <div class="space-y-2">
+                  <div
+                    v-for="blogger in unscheduledBloggers"
+                    :key="blogger.id"
+                    class="rounded-lg border border-[#E8E5E1] bg-white p-3 cursor-grab"
+                    draggable="true"
+                    @dragstart="dragBlogger(blogger.id)"
+                  >
+                    <div class="font-semibold">{{ blogger.name }}</div>
+                    <div class="mt-1 flex flex-wrap gap-1">
+                      <span class="pill">{{ blogger.size }}</span>
+                      <span class="pill">{{ blogger.intent }}</span>
+                    </div>
+                  </div>
+                  <div v-if="!unscheduledBloggers.length" class="text-sm text-[#6B6B6B]">本周没有待排期博主。</div>
+                </div>
+              </aside>
+
+              <div class="schedule-grid">
+                <div class="schedule-head text-xs text-[#6B6B6B] font-semibold">时间</div>
+                <div v-for="day in weekDays" :key="day.date" class="schedule-head">
+                  <div class="font-bold">{{ day.label }}</div>
+                  <div class="mt-1 text-xs text-[#6B6B6B]">{{ day.shortDate }}</div>
+                  <div class="mt-2">
+                    <span class="pill" :class="dayScheduleCount(day.date) >= 5 ? 'bg-[#FFE9E7] text-[#A9362F]' : ''">
+                      {{ dayScheduleCount(day.date) }}/5
+                    </span>
+                  </div>
+                </div>
+
+                <template v-for="slot in timeSlots" :key="slot">
+                  <div class="time-cell">{{ timeLabel(slot) }}</div>
+                  <div
+                    v-for="day in weekDays"
+                    :key="day.date + slot"
+                    class="schedule-cell"
+                    :class="{ 'is-full': dayScheduleCount(day.date) >= 5 && !scheduleAt(day.date, slot) }"
+                    @click="openSchedule(day.date, slot)"
+                    @dragover.prevent
+                    @drop="dropSchedule(day.date, slot)"
+                  >
+                    <div
+                      v-if="scheduleAt(day.date, slot)"
+                      class="schedule-block"
+                      :class="'schedule-' + scheduleAt(day.date, slot).status"
+                      draggable="true"
+                      :title="`${getBlogger(scheduleAt(day.date, slot).bloggerId)?.size || ''} · ${getBlogger(scheduleAt(day.date, slot).bloggerId)?.intent || ''} · ${scheduleAt(day.date, slot).prepNotes || '暂无准备事项'}`"
+                      @dragstart.stop="dragSchedule(scheduleAt(day.date, slot).id)"
+                      @dragend="clearDragState"
+                      @click.stop="handleScheduleCardClick(scheduleAt(day.date, slot))"
+                      @dblclick.stop="toggleScheduleTalked(scheduleAt(day.date, slot))"
+                    >
+                      <button type="button" class="schedule-edit-btn" title="编辑排期" @click.stop="editScheduleFromCard(day.date, slot)">
+                        <i class="icon" data-lucide="pencil"></i>
+                      </button>
+                      <div>
+                        <div class="font-semibold text-sm leading-tight">{{ bloggerName(scheduleAt(day.date, slot).bloggerId) }}</div>
+                        <div class="mt-1 text-[12px] opacity-75">{{ isSchedulePast(scheduleAt(day.date, slot)) ? '爽约？' : scheduleStatusLabel(scheduleAt(day.date, slot).status) }}</div>
+                      </div>
+                    </div>
+                    <div v-else class="h-full min-h-[54px] rounded-lg border border-dashed border-[#E8E5E1] flex items-center justify-center text-[12px] text-[#9A948E]">
+                      {{ dayScheduleCount(day.date) >= 5 ? '今日已满' : '空闲可约' }}
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="activeView === 'bloggers'" class="space-y-5">
+          <div class="panel p-4">
+            <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              <div>
+                <h3 class="text-lg font-bold">博主管理</h3>
+                <p class="text-sm text-[#6B6B6B]">统一维护博主资料、阶段、顾虑和签约优势。</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button class="btn" :class="{ 'btn-primary': bloggerMode === 'list' }" @click="bloggerMode = 'list'">列表</button>
+                <button class="btn" :class="{ 'btn-primary': bloggerMode === 'kanban' }" @click="bloggerMode = 'kanban'">看板</button>
+              </div>
+            </div>
+
+            <div class="mt-4 grid gap-3 md:grid-cols-[1fr_160px_160px_150px_150px]">
+              <input class="input" v-model="filters.search" placeholder="搜索博主名称 / 微信备注 / 联系方式" />
+              <select class="input" v-model="filters.stage">
+                <option value="">全部阶段</option>
+                <option v-for="stage in stages" :key="stage" :value="stage">{{ stage }}</option>
+              </select>
+              <select class="input" v-model="filters.size">
+                <option value="">全部量级</option>
+                <option v-for="size in sizes" :key="size" :value="size">{{ size }}</option>
+              </select>
+              <button class="btn" :class="{ 'btn-primary': filters.followupOnly }" @click="filters.followupOnly = !filters.followupOnly">
+                待跟进
+              </button>
+              <button class="btn" :class="{ 'btn-primary': filters.showCompletedFollowups }" @click="filters.showCompletedFollowups = !filters.showCompletedFollowups">
+                显示已完成
+              </button>
+            </div>
+          </div>
+
+          <div v-if="bloggerMode === 'list'" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <article
+              v-for="blogger in filteredBloggers"
+              :key="blogger.id"
+              class="card p-4 hover:bg-[#FAFAF9]"
+              :class="[hasPipelineOverdue(blogger.id) ? 'border-[#F1A29D] bg-[#FFF7F6]' : '', { 'completed': isFollowUpCompleted(blogger) }]"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <button class="text-left min-w-0" @click="openBloggerForm(blogger)">
+                  <div class="flex items-center gap-2 text-lg font-bold truncate">
+                    <span>{{ blogger.name }}</span>
+                    <span v-if="isFollowUpCompleted(blogger)" class="pill completed-mark"><i class="icon" data-lucide="check-circle"></i>已完成</span>
+                  </div>
+                  <div class="mt-1 text-sm text-[#6B6B6B] truncate">{{ blogger.wechatNote || '未填写微信备注' }} · 上次沟通 {{ lastContactDate(blogger.id) }}</div>
+                </button>
+                <div class="flex flex-col items-end gap-1">
+                  <span class="pill bg-[#EAF2FF] text-[#0B62DB]">{{ currentStepDisplay(blogger.id) }}</span>
+                  <span class="pill">{{ blogger.stage }}</span>
+                  <span v-if="hasContractSent(blogger.id)" class="pill bg-[#FFF7D7] text-[#735C0F]">合同已发</span>
+                  <span class="pill" :class="blogger.priority === '高' ? 'bg-[#FFE9E7] text-[#A9362F]' : ''">{{ blogger.priority || '中' }}优先级</span>
+                </div>
+              </div>
+              <div class="mt-3 flex flex-wrap gap-1">
+                <span v-for="platform in blogger.platform" :key="platform" class="pill">{{ platform }}</span>
+                <span class="pill">{{ blogger.size }}</span>
+                <span class="pill">{{ blogger.intent }}</span>
+              </div>
+              <div class="mt-4">
+                <div class="mb-1 flex justify-between text-xs text-[#6B6B6B]">
+                  <span>签约流程</span>
+                  <span>{{ pipelineProgress(blogger.id) }}%</span>
+                </div>
+                <div class="progress-track"><div class="progress-fill" :style="{ width: pipelineProgress(blogger.id) + '%' }"></div></div>
+              </div>
+              <div class="mt-4 rounded-lg bg-[#F8F7F6] p-3 text-sm">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="font-semibold">下一步</span>
+                  <span class="text-[#6B6B6B]">{{ followUpLabel(blogger.followUpDate) }}</span>
+                </div>
+                <div class="mt-1 text-[#55504A] line-clamp-2">{{ blogger.nextAction || '暂无下一步动作' }}</div>
+              </div>
+              <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <div class="text-[#6B6B6B]">顾虑</div>
+                  <div class="mt-1 line-clamp-2">{{ blogger.concerns || '暂无' }}</div>
+                </div>
+                <div>
+                  <div class="text-[#6B6B6B]">优势</div>
+                  <div class="mt-1 line-clamp-2">{{ blogger.advantages || '暂无' }}</div>
+                </div>
+              </div>
+              <div class="mt-4 quick-strip">
+                <button class="btn mini-btn" @click="openBloggerForm(blogger)">编辑</button>
+                <button class="btn mini-btn" @click="openDebriefFor(blogger.id)">复盘</button>
+                <button class="btn mini-btn" @click="openAdvisorFor(blogger.id)">策略</button>
+                <button v-if="(blogger.followUpDate || blogger.nextAction) && !isFollowUpCompleted(blogger)" class="btn mini-btn" @click="completeActionItem({ type: 'blogger', bloggerId: blogger.id })">完成跟进</button>
+              </div>
+            </article>
+            <div v-if="!filteredBloggers.length" class="panel p-6 text-sm text-[#6B6B6B] md:col-span-2 xl:col-span-3">没有匹配的博主。</div>
+          </div>
+
+          <div v-else class="kanban">
+            <section
+              v-for="stage in stages"
+              :key="stage"
+              class="kanban-column"
+              @dragover.prevent
+              @drop="dropKanban(stage)"
+            >
+              <div class="mb-3 flex items-center justify-between">
+                <div class="font-bold">{{ stage }}</div>
+                <span class="pill">{{ bloggersByStage(stage).length }}</span>
+              </div>
+              <div class="space-y-2">
+                <article
+                  v-for="blogger in bloggersByStage(stage)"
+                  :key="blogger.id"
+                  class="kanban-card card p-3"
+                  draggable="true"
+                  @dragstart="dragBlogger(blogger.id)"
+                  @click="openBloggerForm(blogger)"
+                >
+                  <div class="font-semibold">{{ blogger.name }}</div>
+                  <div class="mt-2 flex flex-wrap gap-1">
+                    <span class="pill">{{ blogger.size }}</span>
+                    <span class="pill">{{ blogger.intent }}</span>
+                    <span class="pill">{{ blogger.priority || '中' }}优先级</span>
+                  </div>
+                  <div class="mt-3 rounded-lg bg-[#F8F7F6] p-2 text-xs">
+                    <div class="font-semibold">{{ followUpLabel(blogger.followUpDate) }}</div>
+                    <div class="mt-1 text-[#6B6B6B] line-clamp-2">{{ blogger.nextAction || '暂无下一步动作' }}</div>
+                  </div>
+                  <div class="mt-3 text-xs text-[#6B6B6B] line-clamp-2">{{ blogger.notes || blogger.concerns || '暂无备注' }}</div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section v-if="activeView === 'pipeline'" class="space-y-5">
+          <div class="panel p-4">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h3 class="text-lg font-bold">Pipeline 进度视图</h3>
+                <p class="text-sm text-[#6B6B6B]">点节点或用下拉列表快速更新进度；红色节点表示超时。</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <select class="input max-w-[220px]" v-model="selectedPipelineBloggerId">
+                  <option value="">全部博主</option>
+                  <option v-for="blogger in state.bloggers" :key="blogger.id" :value="blogger.id">{{ blogger.name }}</option>
+                </select>
+                <button class="btn" :class="{ 'btn-primary': pipelineFilter === 'all' }" @click="pipelineFilter = 'all'">全部</button>
+                <button class="btn" :class="{ 'btn-primary': pipelineFilter === 'active' }" @click="pipelineFilter = 'active'">进行中</button>
+                <button class="btn" :class="{ 'btn-primary': pipelineFilter === 'completed' }" @click="pipelineFilter = 'completed'">已完成</button>
+                <button class="btn" :class="{ 'btn-primary': pipelineFilter === 'overdue' }" @click="pipelineFilter = 'overdue'">有超时</button>
+                <select class="input max-w-[180px]" v-model="pipelineSort">
+                  <option value="current">按当前步骤</option>
+                  <option value="progress">按完成数</option>
+                  <option value="name">按名称</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="pipeline-list">
+            <article v-for="row in pipelineRows" :key="row.pipeline.id" class="card pipeline-list-card">
+              <div class="pipeline-status-strip" :class="pipelineStatusClass(row)"></div>
+              <div class="p-4">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <button class="text-left min-w-0" @click="openBloggerForm(row.blogger)">
+                    <div class="text-lg font-bold">{{ row.blogger.name }}</div>
+                    <div class="mt-2 flex flex-wrap gap-1">
+                      <span class="pill">{{ row.blogger.stage }}</span>
+                      <span class="pill">{{ row.blogger.priority || '中' }}优先级</span>
+                      <span v-if="row.hasOverdue" class="pill bg-[#FFE9E7] text-[#A9362F]">有超时</span>
+                      <span v-if="hasContractSent(row.blogger.id)" class="pill bg-[#FFF7D7] text-[#735C0F]">合同已发</span>
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-1">
+                      <span v-for="platform in row.blogger.platform" :key="platform" class="pill">{{ platform }}</span>
+                      <span class="pill">{{ row.blogger.size }}</span>
+                      <span class="pill">上次沟通 {{ lastContactDate(row.blogger.id) }}</span>
+                    </div>
+                  </button>
+                  <div class="min-w-[220px] space-y-3">
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="font-semibold">{{ row.doneCount }}/10</span>
+                      <span class="text-[#6B6B6B]">{{ row.completed ? '已完成' : '待完成：' + stepShortLabel(row.currentStep) }}</span>
+                    </div>
+                    <div class="progress-track mt-2"><div class="progress-fill" :style="{ width: pipelineProgress(row.pipeline.bloggerId) + '%' }"></div></div>
+                    <label class="block">
+                      <span class="mb-1 block text-xs font-semibold text-[#6B6B6B]">快速更新到</span>
+                      <select class="input" :value="pipelineDoneThrough(row.pipeline)" @change="setPipelineProgress(row.pipeline, Number($event.target.value))">
+                        <option :value="0">未开始</option>
+                        <option v-for="step in row.pipeline.steps" :key="step.step" :value="step.step">{{ pipelineStepOptionLabel(step.step) }}</option>
+                      </select>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="mt-4 pipeline-progress-steps">
+                  <button
+                    v-for="step in row.pipeline.steps"
+                    :key="step.step"
+                    type="button"
+                    class="pipeline-mini-node"
+                    :class="pipelineStepClass(row.pipeline.bloggerId, step)"
+                    :title="`${step.done ? '点击取消完成' : '点击标记完成'} · ${step.label}${step.doneAt ? ' · ' + formatDateTime(step.doneAt) : ''}${step.note ? ' · ' + step.note : ''}`"
+                    @click="quickTogglePipelineStep(row.pipeline, step)"
+                  >
+                    <span class="pipeline-mini-label">{{ stepShortLabel(step.step) }}</span>
+                    <span v-if="step.done" class="pipeline-mini-status">已完成</span>
+                  </button>
+                </div>
+
+                <div class="mt-4 quick-strip">
+                  <button class="btn mini-btn" @click="openBloggerForm(row.blogger)">编辑</button>
+                  <button class="btn mini-btn" @click="openDebriefFor(row.blogger.id)">复盘</button>
+                  <button class="btn mini-btn" @click="openAdvisorFor(row.blogger.id)">策略</button>
+                </div>
+              </div>
+            </article>
+
+            <div v-if="!pipelineRows.length" class="panel p-6 text-sm text-[#6B6B6B]">没有符合筛选条件的流程。</div>
+          </div>
+        </section>
+
+        <section v-if="activeView === 'debrief'" class="space-y-5">
+          <div class="grid gap-4 xl:grid-cols-[.95fr_1.05fr]">
+            <form class="panel p-4 space-y-4" @submit.prevent="submitDebrief">
+              <div>
+                <h3 class="text-lg font-bold">沟通复盘</h3>
+                <p class="text-sm text-[#6B6B6B]">聊完立刻记录，系统会给出后续动作建议。</p>
+              </div>
+              <div class="grid gap-3 md:grid-cols-2">
+                <label class="block">
+                  <span class="mb-1 block text-sm font-semibold">博主</span>
+                  <select class="input" v-model="debriefForm.bloggerId" required>
+                    <option value="" disabled>选择博主</option>
+                    <option v-for="blogger in state.bloggers" :key="blogger.id" :value="blogger.id">{{ blogger.name }}</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="mb-1 block text-sm font-semibold">沟通日期</span>
+                  <input class="input" type="date" v-model="debriefForm.date" required />
+                </label>
+                <label class="block">
+                  <span class="mb-1 block text-sm font-semibold">整体感觉</span>
+                  <select class="input" v-model="debriefForm.feeling" required>
+                    <option>很顺利</option>
+                    <option>一般</option>
+                    <option>有阻力</option>
+                    <option>基本没戏</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="mb-1 block text-sm font-semibold">签约意向变化</span>
+                  <select class="input" v-model="debriefForm.intentChange" required>
+                    <option>明确想签</option>
+                    <option>还在犹豫</option>
+                    <option>明确拒绝</option>
+                  </select>
+                </label>
+              </div>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">博主核心顾虑</span>
+                <textarea class="input" v-model="debriefForm.concerns" placeholder="聊到哪里卡住了？"></textarea>
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">我方承诺</span>
+                <textarea class="input" v-model="debriefForm.promises" placeholder="我答应补什么资料、给什么案例、什么时候回访？"></textarea>
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">下一步动作</span>
+                <input class="input" v-model="debriefForm.nextAction" placeholder="例如：明天上午发合同 + 同步服务群方案" />
+              </label>
+              <div class="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                <label class="block">
+                  <span class="mb-1 block text-sm font-semibold">下次跟进日</span>
+                  <input class="input" type="date" v-model="debriefForm.followUpDate" />
+                </label>
+                <div class="quick-strip pb-0.5">
+                  <button type="button" class="btn mini-btn" @click="setFollowUpDate(1)">明天</button>
+                  <button type="button" class="btn mini-btn" @click="setFollowUpDate(3)">3天后</button>
+                  <button type="button" class="btn mini-btn" @click="setFollowUpDate(7)">下周</button>
+                </div>
+              </div>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">备注 / 金句</span>
+                <textarea class="input" v-model="debriefForm.quotes" placeholder="记录关键态度、原话或可复用洞察"></textarea>
+              </label>
+              <div class="card p-3">
+                <div class="mb-2 text-sm font-semibold">自动建议</div>
+                <div class="space-y-2 text-sm text-[#55504A]">
+                  <label v-for="item in debriefSuggestions" :key="item" class="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" class="mt-0.5 h-4 w-4 accent-[#0B62DB]" :checked="debriefSuggestionDone.includes(item)" @change="toggleDebriefSuggestion(item)" />
+                    <span :class="debriefSuggestionDone.includes(item) ? 'line-through text-[#9A948E]' : ''">{{ item }}</span>
+                  </label>
+                </div>
+              </div>
+              <button class="btn btn-primary w-full" type="submit">保存复盘</button>
+            </form>
+
+            <section class="panel p-4">
+              <div class="mb-4 flex flex-col gap-3">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 class="text-lg font-bold">复盘记录</h3>
+                    <p class="text-sm text-[#6B6B6B]">按时间倒序沉淀沟通结论。</p>
+                  </div>
+                  <span class="pill">{{ filteredDebriefs.length }}/{{ state.debriefs.length }}</span>
+                </div>
+                <div class="quick-strip">
+                  <button class="btn mini-btn" :class="{ 'btn-primary': debriefFilter === 'all' }" @click="debriefFilter = 'all'">全部</button>
+                  <button class="btn mini-btn" :class="{ 'btn-primary': debriefFilter === 'need' }" @click="debriefFilter = 'need'">需跟进</button>
+                  <button class="btn mini-btn" :class="{ 'btn-primary': debriefFilter === 'completed' }" @click="debriefFilter = 'completed'">已完成</button>
+                  <button class="btn mini-btn" :class="{ 'btn-primary': debriefFilter === 'rejected' }" @click="debriefFilter = 'rejected'">已拒绝</button>
+                </div>
+                <label class="relative block">
+                  <i class="icon absolute left-3 top-1/2 -translate-y-1/2 text-[#6B6B6B]" data-lucide="search"></i>
+                  <input class="input pl-10" v-model="debriefSearch" placeholder="按博主名称搜索" />
+                </label>
+              </div>
+
+              <div v-if="filteredDebriefs.length" class="timeline-list">
+                <article v-for="record in filteredDebriefs" :key="record.id" class="timeline-item card p-4">
+                  <span class="timeline-dot"></span>
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <div class="font-bold">{{ bloggerName(record.bloggerId) }} · {{ record.date }}</div>
+                      <div class="mt-1 text-sm text-[#6B6B6B]">跟进日：{{ followUpLabel(record.followUpDate) }}</div>
+                    </div>
+                    <div class="quick-strip justify-end">
+                      <span class="pill">{{ record.intentChange }}</span>
+                      <span v-if="record.followUpStatus === 'completed'" class="pill completed-mark"><i class="icon" data-lucide="check-circle"></i>已完成</span>
+                      <span v-if="record.archived" class="pill">已归档</span>
+                    </div>
+                  </div>
+                  <div class="mt-3 space-y-2 text-sm">
+                    <div><span class="text-[#6B6B6B]">关键结论：</span>{{ record.concerns || record.quotes || '暂无关键结论' }}</div>
+                    <div><span class="text-[#6B6B6B]">博主态度：</span>{{ record.feeling }}</div>
+                    <div><span class="text-[#6B6B6B]">下一步：</span>{{ record.nextAction || '未填写' }}</div>
+                  </div>
+
+                  <div class="timeline-detail" :class="{ open: expandedDebriefs[record.id] }">
+                    <div class="mt-3 rounded-lg bg-[#F8F7F6] p-3 text-sm text-[#55504A] space-y-2">
+                      <div v-if="record.promises"><span class="font-semibold">我方承诺：</span>{{ record.promises }}</div>
+                      <div v-if="record.quotes"><span class="font-semibold">备注：</span>{{ record.quotes }}</div>
+                      <div v-if="record.suggestions?.length">
+                        <div class="font-semibold">建议：</div>
+                        <div v-for="suggestion in record.suggestions" :key="suggestion">{{ suggestion }}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-3 quick-strip">
+                    <button class="btn mini-btn" @click="toggleDebriefDetail(record.id)">{{ expandedDebriefs[record.id] ? '收起详情' : '查看详情' }}</button>
+                    <button class="btn mini-btn" @click="markDebriefFollowed(record)">标记跟进</button>
+                    <button class="btn mini-btn" @click="archiveDebrief(record)">归档</button>
+                  </div>
+                </article>
+              </div>
+              <div v-else class="card p-6 text-sm text-[#6B6B6B]">约谈完成后，记录会自动出现在这里。</div>
+            </section>
+          </div>
+        </section>
+
+        <section v-if="activeView === 'advisor'" class="space-y-5">
+          <div class="grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
+            <form class="panel p-4 space-y-4" @submit.prevent>
+              <div>
+                <h3 class="text-lg font-bold">智能分析助手</h3>
+                <p class="text-sm text-[#6B6B6B]">基于预设规则引擎生成沟通策略，不调用外部接口。</p>
+              </div>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">套用已有博主</span>
+                <select class="input" v-model="selectedAdvisorBloggerId" @change="applyAdvisorBlogger($event.target.value)">
+                  <option value="">手动填写</option>
+                  <option v-for="blogger in state.bloggers" :key="blogger.id" :value="blogger.id">{{ blogger.name }}</option>
+                </select>
+              </label>
+              <div class="grid gap-3 md:grid-cols-2">
+                <label class="block">
+                  <span class="mb-1 block text-sm font-semibold">博主名称</span>
+                  <input class="input" v-model="advisorInput.name" placeholder="例如：阿琦同学" />
+                </label>
+                <label class="block">
+                  <span class="mb-1 block text-sm font-semibold">领域</span>
+                  <select class="input" v-model="advisorInput.field">
+                    <option v-for="field in fields" :key="field" :value="field">{{ field }}</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="mb-1 block text-sm font-semibold">量级</span>
+                  <select class="input" v-model="advisorInput.size">
+                    <option v-for="size in sizes" :key="size" :value="size">{{ size }}</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="mb-1 block text-sm font-semibold">意向</span>
+                  <select class="input" v-model="advisorInput.intent">
+                    <option value="全约">全约</option>
+                    <option value="半约">半约</option>
+                    <option value="未确认">未确认</option>
+                  </select>
+                </label>
+              </div>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">近期内容表现</span>
+                <textarea class="input" v-model="advisorInput.performance" placeholder="例如：最近一条小红书笔记 8 万赞，评论多集中在职场焦虑"></textarea>
+              </label>
+              <button v-if="selectedAdvisorBloggerId" type="button" class="btn btn-primary w-full" @click="saveAdvisorAsAction">
+                保存为今日下一步
+              </button>
+            </form>
+
+            <section class="panel p-4">
+              <div class="mb-4">
+                <h3 class="text-lg font-bold">沟通策略建议</h3>
+                <p class="text-sm text-[#6B6B6B]">{{ advisorInput.name || '当前博主' }} · {{ advisorInput.size }} · {{ advisorInput.field }}</p>
+              </div>
+              <div class="grid gap-3 md:grid-cols-2">
+                <article class="card p-4">
+                  <div class="text-sm text-[#6B6B6B]">重点</div>
+                  <div class="mt-2 font-semibold">{{ advisorResult.focus }}</div>
+                </article>
+                <article class="card p-4">
+                  <div class="text-sm text-[#6B6B6B]">预计签约率</div>
+                  <div class="mt-2 text-2xl font-bold text-[#0B62DB]">{{ advisorResult.rate }}</div>
+                </article>
+                <article class="card p-4 md:col-span-2">
+                  <div class="text-sm text-[#6B6B6B]">话术方向</div>
+                  <div class="mt-2 font-semibold">{{ advisorResult.script }}</div>
+                </article>
+                <article class="card p-4 md:col-span-2">
+                  <div class="text-sm text-[#6B6B6B]">注意事项</div>
+                  <div class="mt-2">{{ advisorResult.warning }}</div>
+                </article>
+                <article class="card p-4">
+                  <div class="text-sm text-[#6B6B6B]">常见顾虑</div>
+                  <div class="mt-2 flex flex-wrap gap-2">
+                    <span v-for="item in advisorResult.concerns" :key="item" class="pill">{{ item }}</span>
+                  </div>
+                </article>
+                <article class="card p-4">
+                  <div class="text-sm text-[#6B6B6B]">建议</div>
+                  <div class="mt-2">{{ advisorResult.advice }}</div>
+                </article>
+              </div>
+              <div v-if="advisorInput.performance" class="mt-4 card p-4">
+                <div class="text-sm text-[#6B6B6B]">结合近期表现</div>
+                <div class="mt-2">先肯定内容里已经被验证的亮点，再把合作价值落到可执行资源上：选题、商务、品牌案例和后续节奏。</div>
+              </div>
+
+              <div class="mt-5 space-y-4">
+                <section v-for="group in advisorCategories" :key="group.id" class="advisor-section">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="font-bold">{{ group.title }}</div>
+                    <span class="pill">{{ group.items.length }}</span>
+                  </div>
+                  <article
+                    v-for="item in group.items"
+                    :key="item.id"
+                    class="card advisor-card p-3"
+                    :class="{ adopted: advisorDecisions[item.id] === 'adopted', ignored: advisorDecisions[item.id] === 'ignored' }"
+                  >
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <div class="font-semibold">{{ item.title }}</div>
+                        <div class="mt-1 text-sm text-[#6B6B6B]">{{ item.detail }}</div>
+                      </div>
+                      <div class="quick-strip shrink-0">
+                        <span v-if="advisorDecisions[item.id] === 'adopted'" class="pill completed-mark"><i class="icon" data-lucide="check-circle"></i>已采纳</span>
+                        <button v-else class="btn mini-btn" @click="setAdvisorDecision(item.id, 'adopted')">已采纳</button>
+                        <button class="btn mini-btn" @click="setAdvisorDecision(item.id, 'ignored')">忽略</button>
+                      </div>
+                    </div>
+                  </article>
+                  <div v-if="!group.items.length" class="card p-3 text-sm text-[#6B6B6B]">暂无这类建议。</div>
+                </section>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section v-if="activeView === 'settings'" class="space-y-5">
+          <section class="panel p-4 space-y-3">
+            <div>
+              <h3 class="text-lg font-bold">界面偏好</h3>
+              <p class="text-sm text-[#6B6B6B]">恢复被忽略的智能建议，不影响博主数据。</p>
+            </div>
+            <button class="btn" @click="resetAdvisorDecisions">恢复智能建议</button>
+          </section>
+
+          <section class="panel p-4 space-y-4">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h3 class="text-lg font-bold">批量导入</h3>
+                <p class="text-sm text-[#6B6B6B]">每行一个博主，格式：博主名称, 平台, 量级。</p>
+              </div>
+              <button class="btn" @click="fillImportExample">填入示例</button>
+            </div>
+            <textarea
+              class="input min-h-[180px]"
+              v-model="bulkImportText"
+              placeholder="小A, 小红书, 小博主&#10;大B, B站/小红书, 中博主&#10;C姐, 抖音, 大博主"
+            ></textarea>
+            <div class="quick-strip">
+              <button class="btn" @click="parseBulkImport">解析预览</button>
+              <button class="btn btn-primary" :disabled="!bulkImportPreview.some(row => row.valid)" @click="confirmBulkImport">确认批量创建</button>
+              <span class="text-sm text-[#6B6B6B]">{{ bulkImportMessage }}</span>
+            </div>
+            <div v-if="bulkImportPreview.length" class="card p-3 space-y-2">
+              <div class="import-row text-xs font-semibold text-[#6B6B6B]">
+                <div>博主名称</div>
+                <div>平台</div>
+                <div>量级</div>
+                <div>状态</div>
+              </div>
+              <div v-for="(row, index) in bulkImportPreview" :key="index" class="import-row rounded-lg border border-[#E8E5E1] p-2 text-sm">
+                <div>{{ row.name || '-' }}</div>
+                <div>{{ row.platform.join('/') }}</div>
+                <div>{{ row.size }}</div>
+                <div><span class="pill" :class="row.valid ? 'bg-[#E8F8E8] text-[#2A6E2C]' : 'bg-[#FFE9E7] text-[#A9362F]'">{{ row.valid ? '可创建' : row.error }}</span></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel p-4 space-y-4">
+            <div>
+              <h3 class="text-lg font-bold">备份 / 恢复</h3>
+              <p class="text-sm text-[#6B6B6B]">数据仍保存在浏览器 localStorage，建议重要批次前下载一份 JSON 备份。</p>
+            </div>
+            <div class="quick-strip">
+              <button class="btn" @click="exportBackup">下载 JSON 备份</button>
+            </div>
+            <label class="block">
+              <span class="mb-1 block text-sm font-semibold">粘贴备份 JSON 恢复</span>
+              <textarea class="input min-h-[120px]" v-model="restoreText" placeholder="粘贴之前下载的 JSON 内容"></textarea>
+            </label>
+            <button class="btn btn-danger" @click="restoreBackup">恢复备份</button>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div v-if="bloggerModalOpen" class="modal-backdrop">
+      <form class="modal" @submit.prevent="bloggerModalMode === 'quick' ? saveQuickBlogger() : saveBlogger()">
+        <div class="border-b border-[#E8E5E1] p-5 flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-bold">{{ bloggerModalMode === 'quick' ? '快速新增博主' : bloggerModalMode === 'created' ? '已创建博主' : bloggerForm.name }}</h3>
+            <p class="mt-1 text-sm text-[#6B6B6B]">{{ bloggerModalMode === 'quick' ? '3 个字段，5 秒录入一个博主。' : bloggerModalMode === 'created' ? '需要补充详细信息吗？' : '在一个博主维度查看资料、沟通记录和流程进度。' }}</p>
+          </div>
+          <button type="button" class="btn btn-quiet" @click="closeBloggerForm">关闭</button>
+        </div>
+
+        <div v-if="bloggerModalMode === 'quick'" class="p-5 space-y-4">
+          <label class="block">
+            <span class="mb-1 block text-sm font-semibold">博主名称</span>
+            <input class="input" v-model.trim="bloggerForm.name" required placeholder="必填" />
+          </label>
+          <label class="block">
+            <span class="mb-1 block text-sm font-semibold">粉丝量级</span>
+            <select class="input" v-model="bloggerForm.size">
+              <option v-for="size in sizes" :key="size" :value="size">{{ size }}</option>
+            </select>
+          </label>
+          <div>
+            <div class="mb-2 text-sm font-semibold">平台</div>
+            <div class="flex flex-wrap gap-2">
+              <label v-for="platform in platforms" :key="platform" class="pill cursor-pointer">
+                <input type="checkbox" class="mr-2 accent-[#0B62DB]" :value="platform" v-model="bloggerForm.platform" />
+                {{ platform }}
+              </label>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary w-full">快速保存</button>
+        </div>
+
+        <div v-else-if="bloggerModalMode === 'created'" class="p-5 space-y-4">
+          <div class="card p-4">
+            <div class="text-lg font-bold">{{ bloggerForm.name }} 已保存</div>
+            <div class="mt-2 text-sm text-[#6B6B6B]">状态已默认为待沟通，Pipeline 已自动创建。</div>
+          </div>
+          <div class="flex flex-wrap justify-end gap-2">
+            <button type="button" class="btn" @click="continueQuickCreate">继续新增</button>
+            <button type="button" class="btn" @click="closeBloggerForm">先这样</button>
+            <button type="button" class="btn btn-primary" @click="perfectLastCreated">去完善</button>
+          </div>
+        </div>
+
+        <div v-else class="p-5 space-y-4">
+          <div class="quick-strip border-b border-[#E8E5E1] pb-3">
+            <button type="button" class="tab-button" :class="{ active: bloggerDetailTab === 'base' }" @click="bloggerDetailTab = 'base'">基础信息</button>
+            <button type="button" class="tab-button" :class="{ active: bloggerDetailTab === 'debriefs' }" @click="bloggerDetailTab = 'debriefs'">沟通记录</button>
+            <button type="button" class="tab-button" :class="{ active: bloggerDetailTab === 'pipeline' }" @click="bloggerDetailTab = 'pipeline'">流程进度</button>
+          </div>
+
+          <div v-if="bloggerDetailTab === 'base'" class="space-y-4">
+            <div class="card p-4 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="font-semibold">智能录入</div>
+                <div class="quick-strip">
+                  <button type="button" class="btn mini-btn" @click="applySmartBloggerInput">识别填充</button>
+                  <button type="button" class="btn mini-btn" @click="clearSmartBloggerInput">清空</button>
+                </div>
+              </div>
+              <textarea
+                class="input min-h-[88px]"
+                v-model="smartBloggerInput"
+                placeholder="例：知乎中博主，半约，高优先级，明天跟进，顾虑是担心独家，下一步发合同"
+              ></textarea>
+              <div v-if="smartBloggerFeedback" class="text-sm text-[#6B6B6B]">{{ smartBloggerFeedback }}</div>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-2">
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">博主名称</span>
+                <input class="input" v-model.trim="bloggerForm.name" required placeholder="必填" />
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">微信备注</span>
+                <input class="input" v-model="bloggerForm.wechatNote" placeholder="微信里的备注名" />
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">粉丝量级</span>
+                <select class="input" v-model="bloggerForm.size">
+                  <option v-for="size in sizes" :key="size" :value="size">{{ size }}</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">签约意向</span>
+                <select class="input" v-model="bloggerForm.intent">
+                  <option value="全约">全约</option>
+                  <option value="半约">半约</option>
+                  <option value="未确认">未确认</option>
+                  <option value="拒绝">拒绝</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">当前阶段</span>
+                <select class="input" v-model="bloggerForm.stage">
+                  <option v-for="stage in stages" :key="stage" :value="stage">{{ stage }}</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">领域</span>
+                <select class="input" v-model="bloggerForm.field">
+                  <option v-for="field in fields" :key="field" :value="field">{{ field }}</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">优先级</span>
+                <select class="input" v-model="bloggerForm.priority">
+                  <option value="高">高</option>
+                  <option value="中">中</option>
+                  <option value="低">低</option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">下次跟进日</span>
+                <input class="input" type="date" v-model="bloggerForm.followUpDate" />
+              </label>
+            </div>
+
+            <div>
+              <div class="mb-2 text-sm font-semibold">平台</div>
+              <div class="flex flex-wrap gap-2">
+                <label v-for="platform in platforms" :key="platform" class="pill cursor-pointer">
+                  <input type="checkbox" class="mr-2 accent-[#0B62DB]" :value="platform" v-model="bloggerForm.platform" />
+                  {{ platform }}
+                </label>
+              </div>
+            </div>
+
+            <label class="block">
+              <span class="mb-1 block text-sm font-semibold">联系方式</span>
+              <input class="input" v-model="bloggerForm.contact" placeholder="手机 / 微信号 / 飞书" />
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-sm font-semibold">下一步动作</span>
+              <input class="input" v-model="bloggerForm.nextAction" placeholder="例如：明天发合同 / 补商单案例 / 三天后再约通话" />
+            </label>
+            <div class="card p-4 space-y-3">
+              <div class="flex items-center justify-between gap-3">
+                <div class="font-semibold">关联链接</div>
+                <button type="button" class="btn mini-btn" :disabled="bloggerForm.links?.length >= 5" @click="addBloggerLink">添加链接</button>
+              </div>
+              <div v-if="bloggerForm.links?.length" class="space-y-2">
+                <div v-for="(link, index) in bloggerForm.links" :key="link.id || index" class="link-row">
+                  <input class="input" v-model="link.name" placeholder="名称，如飞书合同文档" />
+                  <input class="input" v-model="link.url" placeholder="https://..." />
+                  <div class="quick-strip">
+                    <a v-if="link.url" class="btn mini-btn" :href="link.url" target="_blank" rel="noopener noreferrer">打开</a>
+                    <button type="button" class="btn mini-btn btn-danger" @click="removeBloggerLink(index)">删除</button>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="text-sm text-[#6B6B6B]">最多 5 条，可放合同、账号主页、商务提报单等。</div>
+            </div>
+            <label class="block">
+              <span class="mb-1 block text-sm font-semibold">博主顾虑</span>
+              <textarea class="input" v-model="bloggerForm.concerns" placeholder="她犹豫、提问、担心的点"></textarea>
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-sm font-semibold">签约优势</span>
+              <textarea class="input" v-model="bloggerForm.advantages" placeholder="为什么值得签 / 我方可以给到的确定优势"></textarea>
+            </label>
+            <label class="block">
+              <span class="mb-1 block text-sm font-semibold">备注</span>
+              <textarea class="input" v-model="bloggerForm.notes" placeholder="其他补充信息"></textarea>
+            </label>
+          </div>
+
+          <div v-else-if="bloggerDetailTab === 'debriefs'" class="space-y-3">
+            <article v-for="record in bloggerDebriefs(bloggerForm.id)" :key="record.id" class="card p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="font-semibold">{{ record.date }} · {{ record.feeling }}</div>
+                <span class="pill">{{ record.intentChange }}</span>
+              </div>
+              <div class="mt-2 text-sm text-[#55504A]">{{ record.concerns || '暂无顾虑记录' }}</div>
+              <div class="mt-2 text-sm text-[#6B6B6B]">下一步：{{ record.nextAction || '未填写' }}</div>
+            </article>
+            <div v-if="!bloggerDebriefs(bloggerForm.id).length" class="card p-4 text-sm text-[#6B6B6B]">这个博主还没有沟通记录。</div>
+          </div>
+
+          <div v-else class="space-y-4">
+            <div class="space-y-3" v-if="bloggerPipeline(bloggerForm.id)">
+              <label class="block">
+                <span class="mb-1 block text-sm font-semibold">快速更新流程</span>
+                <select class="input" :value="pipelineDoneThrough(bloggerPipeline(bloggerForm.id))" @change="setPipelineProgress(bloggerPipeline(bloggerForm.id), Number($event.target.value))">
+                  <option :value="0">未开始</option>
+                  <option v-for="step in bloggerPipeline(bloggerForm.id).steps" :key="step.step" :value="step.step">{{ pipelineStepOptionLabel(step.step) }}</option>
+                </select>
+              </label>
+              <div class="pipeline-compact">
+                <button
+                  v-for="step in bloggerPipeline(bloggerForm.id).steps"
+                  :key="step.step"
+                  type="button"
+                  class="pipeline-mini-node"
+                  :class="pipelineStepClass(bloggerForm.id, step)"
+                  :title="`${step.done ? '点击取消完成' : '点击标记完成'} · ${step.label}`"
+                  @click="quickTogglePipelineStep(bloggerPipeline(bloggerForm.id), step)"
+                >
+                  <span class="pipeline-mini-label">{{ stepShortLabel(step.step) }}</span>
+                  <span v-if="step.done" class="pipeline-mini-status">已完成</span>
+                </button>
+              </div>
+            </div>
+            <div v-for="step in bloggerPipeline(bloggerForm.id)?.steps || []" :key="step.step" class="card p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="font-semibold">Step {{ step.step }} · {{ step.label }}</div>
+                  <div class="mt-1 text-sm text-[#6B6B6B]">{{ step.doneAt ? formatDateTime(step.doneAt) : '未完成' }}</div>
+                </div>
+                <span v-if="isStepOverdue(bloggerForm.id, step)" class="pill bg-[#FFE9E7] text-[#A9362F]">超时</span>
+              </div>
+              <div v-if="step.note" class="mt-2 text-sm text-[#55504A]">{{ step.note }}</div>
+            </div>
+          </div>
+        </div>
+        <div v-if="bloggerModalMode === 'detail'" class="border-t border-[#E8E5E1] p-5 flex items-center justify-between gap-3">
+          <button v-if="bloggerForm.id" type="button" class="btn" @click="deleteBlogger(bloggerForm.id)">删除</button>
+          <span v-else></span>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+
+    <div v-if="scheduleModalOpen" class="modal-backdrop" @click.self="closeSchedule">
+      <form class="modal" @submit.prevent="saveSchedule">
+        <div class="border-b border-[#E8E5E1] p-5 flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-bold">安排约谈</h3>
+            <p class="mt-1 text-sm text-[#6B6B6B]">{{ scheduleForm.date }} · {{ timeLabel(scheduleForm.timeSlot) }}</p>
+          </div>
+          <button type="button" class="btn btn-quiet" @click="closeSchedule">关闭</button>
+        </div>
+        <div class="p-5 space-y-4">
+          <label class="block">
+            <span class="mb-1 block text-sm font-semibold">博主</span>
+            <select class="input" v-model="scheduleForm.bloggerId" required>
+              <option value="" disabled>选择博主</option>
+              <option v-for="blogger in scheduleBloggerOptions(scheduleForm.bloggerId)" :key="blogger.id" :value="blogger.id">{{ blogger.name }}</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="mb-1 block text-sm font-semibold">状态</span>
+            <select class="input" v-model="scheduleForm.status">
+              <option value="pending">已约未确认</option>
+              <option value="confirmed">已确认</option>
+              <option value="talked">已约已聊</option>
+              <option value="completed">已完成沟通</option>
+              <option value="cancelled">爽约/取消</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="mb-1 block text-sm font-semibold">准备事项</span>
+            <textarea class="input" v-model="scheduleForm.prepNotes" placeholder="提前看最近 3 条内容、准备案例、确认合同版本等"></textarea>
+          </label>
+        </div>
+        <div class="border-t border-[#E8E5E1] p-5 flex items-center justify-between gap-3">
+          <button v-if="scheduleForm.id" type="button" class="btn btn-danger" @click="deleteSchedule(scheduleForm.id)">取消排期</button>
+          <span v-else></span>
+          <button type="submit" class="btn btn-primary">保存排期</button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+    const STORAGE_KEY = "signflow.local.v1";
+    const SIDEBAR_COLLAPSED_KEY = "sidebar_collapsed";
+    const ADVISOR_DECISIONS_KEY = "signflow.advisor.decisions";
+
+    const stages = ["待沟通", "已约", "已聊", "谈判中", "已签", "已拒"];
+    const sizes = ["小博主", "中博主", "大博主"];
+    const platforms = ["小红书", "B站", "抖音", "公众号", "视频号", "微博", "即刻", "知乎", "Twitter"];
+    const fields = ["美妆", "科技", "生活", "知识", "情感", "职场", "母婴", "其他"];
+    const pipelineLabels = [
+      "首次沟通完成",
+      "确认签约意向",
+      "发送合同",
+      "博主确认合同内容",
+      "合同签署完成",
+      "拉入服务群",
+      "博主填写表格A",
+      "博主填写表格B",
+      "次日回访",
+      "一个月内深度对谈"
+    ];
+    const pipelineShortLabels = ["首次沟通", "确认意向", "发送合同", "博主确认", "签署完成", "拉群", "表格A", "表格B", "次日回访", "月度对谈"];
+
+    function uid(prefix = "id") {
+      if (window.crypto && crypto.randomUUID) {
+        return `${prefix}_${crypto.randomUUID()}`;
+      }
+      return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    }
+
+    function toDateInput(date) {
+      const copy = new Date(date);
+      copy.setMinutes(copy.getMinutes() - copy.getTimezoneOffset());
+      return copy.toISOString().slice(0, 10);
+    }
+
+    function addDays(date, days) {
+      const next = new Date(date);
+      next.setDate(next.getDate() + days);
+      return next;
+    }
+
+    function startOfWeek(date = new Date()) {
+      const copy = new Date(date);
+      const day = copy.getDay() || 7;
+      copy.setHours(0, 0, 0, 0);
+      copy.setDate(copy.getDate() - day + 1);
+      return copy;
+    }
+
+    function createSteps(doneThrough = 0, offsets = {}) {
+      return pipelineLabels.map((label, index) => {
+        const step = index + 1;
+        const done = step <= doneThrough;
+        const offset = offsets[step] ?? step - doneThrough - 1;
+        return {
+          step,
+          label,
+          done,
+          doneAt: done ? addDays(new Date(), offset).toISOString() : null,
+          note: ""
+        };
+      });
+    }
+
+    function seedData() {
+      const week = startOfWeek(new Date());
+      const bloggerSeeds = [
+        {
+          name: "阿琦同学",
+          platform: ["小红书", "抖音"],
+          size: "小博主",
+          intent: "半约",
+          stage: "已约",
+          field: "生活",
+          wechatNote: "阿琦-生活方式",
+          contact: "wx: aq-life",
+          concerns: "担心签约后选题被限制，也怕账号风格变商业化。",
+          advantages: "内容执行力强，互动率高，适合从选题和商单流程上快速扶持。",
+          notes: "先聊成长资源，不要先压分成。",
+          priority: "高",
+          nextAction: "确认明天约谈时间，并提前发 2 个成长扶持案例。",
+          followUpDate: toDateInput(new Date())
+        },
+        {
+          name: "林小盐",
+          platform: ["小红书", "视频号"],
+          size: "中博主",
+          intent: "全约",
+          stage: "谈判中",
+          field: "情感",
+          wechatNote: "小盐-情感",
+          contact: "wx: saltfeel",
+          concerns: "在意独家限制和商务分成，已有其他机构接触。",
+          advantages: "粉丝信任感强，商业化空间大，适合品牌定制内容。",
+          notes: "需要准备过往商单案例。",
+          priority: "高",
+          nextAction: "补一版商单案例和全约/半约边界说明。",
+          followUpDate: toDateInput(addDays(new Date(), 1))
+        },
+        {
+          name: "Nova科技",
+          platform: ["B站", "微博"],
+          size: "大博主",
+          intent: "未确认",
+          stage: "已聊",
+          field: "科技",
+          wechatNote: "Nova",
+          contact: "手机号待补",
+          concerns: "觉得现有商业收入已经不错，怀疑 MCN 增量。",
+          advantages: "内容专业度高，品牌合作可扩展到发布会和年度项目。",
+          notes: "下一轮必须展示资源能力。",
+          priority: "高",
+          nextAction: "发科技品牌案例和发布会资源清单。",
+          followUpDate: toDateInput(new Date())
+        },
+        {
+          name: "栗子职场笔记",
+          platform: ["公众号", "小红书"],
+          size: "中博主",
+          intent: "半约",
+          stage: "已签",
+          field: "职场",
+          wechatNote: "栗子-职场",
+          contact: "wx: liziwork",
+          concerns: "希望保留自接品牌的自由度。",
+          advantages: "内容稳定，受众精准，已适配知识付费和品牌软植入。",
+          notes: "合同已签，等基础信息表。",
+          priority: "中",
+          nextAction: "提醒填写基础信息表和账号数据表。",
+          followUpDate: toDateInput(addDays(new Date(), 2))
+        },
+        {
+          name: "Mia美妆日记",
+          platform: ["小红书", "抖音"],
+          size: "小博主",
+          intent: "全约",
+          stage: "待沟通",
+          field: "美妆",
+          wechatNote: "Mia-美妆",
+          contact: "",
+          concerns: "",
+          advantages: "垂类清晰，审美好，适合品牌种草。",
+          notes: "先看近 5 条笔记。",
+          priority: "中",
+          nextAction: "补联系方式，约首次沟通时间。",
+          followUpDate: toDateInput(addDays(new Date(), 1))
+        },
+        {
+          name: "野生知识库",
+          platform: ["B站", "公众号"],
+          size: "大博主",
+          intent: "拒绝",
+          stage: "已拒",
+          field: "知识",
+          wechatNote: "知识库老师",
+          contact: "",
+          concerns: "明确不想签独家。",
+          advantages: "品牌背书强。",
+          notes: "三个月后再轻触达。",
+          priority: "低",
+          nextAction: "三个月后用轻量案例再触达。",
+          followUpDate: toDateInput(addDays(new Date(), 90))
+        }
+      ].map(item => ({
+        id: uid("blogger"),
+        createdAt: addDays(new Date(), -8).toISOString(),
+        updatedAt: new Date().toISOString(),
+        links: item.links || [],
+        ...item
+      }));
+
+      const byName = Object.fromEntries(bloggerSeeds.map(item => [item.name, item.id]));
+
+      return {
+        bloggers: bloggerSeeds,
+        schedules: [
+          {
+            id: uid("schedule"),
+            bloggerId: byName["阿琦同学"],
+            date: toDateInput(addDays(week, 1)),
+            timeSlot: "10:00",
+            status: "pending",
+            prepNotes: "看最近 3 条生活方式笔记，准备成长支持方案。"
+          },
+          {
+            id: uid("schedule"),
+            bloggerId: byName["林小盐"],
+            date: toDateInput(addDays(week, 2)),
+            timeSlot: "15:00",
+            status: "confirmed",
+            prepNotes: "准备商单案例和半约/全约差异。"
+          },
+          {
+            id: uid("schedule"),
+            bloggerId: byName["Nova科技"],
+            date: toDateInput(addDays(week, 0)),
+            timeSlot: "19:00",
+            status: "completed",
+            prepNotes: "已聊完，需要复盘资源增量。"
+          }
+        ],
+        pipelines: [
+          {
+            id: uid("pipeline"),
+            bloggerId: byName["阿琦同学"],
+            steps: createSteps(1, { 1: -1 })
+          },
+          {
+            id: uid("pipeline"),
+            bloggerId: byName["林小盐"],
+            steps: createSteps(3, { 1: -6, 2: -5, 3: -4 })
+          },
+          {
+            id: uid("pipeline"),
+            bloggerId: byName["Nova科技"],
+            steps: createSteps(1, { 1: -2 })
+          },
+          {
+            id: uid("pipeline"),
+            bloggerId: byName["栗子职场笔记"],
+            steps: createSteps(6, { 1: -12, 2: -11, 3: -10, 4: -8, 5: -7, 6: -6 })
+          },
+          {
+            id: uid("pipeline"),
+            bloggerId: byName["Mia美妆日记"],
+            steps: createSteps(0)
+          },
+          {
+            id: uid("pipeline"),
+            bloggerId: byName["野生知识库"],
+            steps: createSteps(1, { 1: -9 })
+          }
+        ],
+        debriefs: [
+          {
+            id: uid("debrief"),
+            bloggerId: byName["Nova科技"],
+            date: toDateInput(addDays(new Date(), -2)),
+            feeling: "有阻力",
+            intentChange: "还在犹豫",
+            concerns: "他不确定我们能不能带来自己拿不到的品牌机会。",
+            promises: "补 3 个科技品牌合作案例和发布会资源清单。",
+            nextAction: "三天后约一次 20 分钟短通话。",
+            quotes: "他说：除非你们能给到确定增量，否则我没必要多一层合作。",
+            suggestions: ["明天发一条轻松的消息保持联系", "整理一份他顾虑点的解答方案", "3天后再约一次简短通话"]
+          }
+        ]
+      };
+    }
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return seedData();
+        const parsed = JSON.parse(raw);
+        if (!parsed.bloggers || !parsed.schedules || !parsed.pipelines || !parsed.debriefs) {
+          return seedData();
+        }
+        return parsed;
+      } catch (error) {
+        console.warn("SignFlow localStorage 读取失败，已使用示例数据。", error);
+        return seedData();
+      }
+    }
+
+    function loadAdvisorDecisions() {
+      try {
+        return JSON.parse(localStorage.getItem(ADVISOR_DECISIONS_KEY) || "{}");
+      } catch (error) {
+        return {};
+      }
+    }
+
+    createApp({
+      data() {
+        const today = toDateInput(new Date());
+        const data = loadData();
+        return {
+          activeView: "dashboard",
+          state: data,
+          navItems: [
+            { id: "dashboard", label: "仪表盘", icon: "layout-dashboard" },
+            { id: "schedule", label: "排期日历", icon: "calendar" },
+            { id: "bloggers", label: "博主管理", icon: "users" },
+            { id: "pipeline", label: "流程追踪", icon: "git-branch" },
+            { id: "debrief", label: "复盘记录", icon: "clipboard-list" },
+            { id: "advisor", label: "智能建议", icon: "lightbulb" },
+            { id: "settings", label: "设置", icon: "settings" }
+          ],
+          stages,
+          sizes,
+          platforms,
+          fields,
+          timeSlots: Array.from({ length: 12 }, (_, index) => `${String(index + 10).padStart(2, "0")}:00`),
+          currentWeekStart: startOfWeek(new Date()),
+          sidebarCollapsed: localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true",
+          filters: { search: "", stage: "", size: "", followupOnly: false, showCompletedFollowups: false },
+          bloggerMode: "list",
+          bloggerModalOpen: false,
+          bloggerForm: {},
+          bloggerFormSnapshot: "",
+          smartBloggerInput: "",
+          smartBloggerFeedback: "",
+          bloggerModalMode: "quick",
+          bloggerDetailTab: "base",
+          lastCreatedBloggerId: "",
+          scheduleModalOpen: false,
+          scheduleForm: {},
+          draggingBloggerId: null,
+          draggingScheduleId: null,
+          scheduleClickTimer: null,
+          selectedPipelineBloggerId: "",
+          pipelineFilter: "all",
+          pipelineSort: "current",
+          debriefForm: {
+            bloggerId: "",
+            date: today,
+            feeling: "一般",
+            intentChange: "还在犹豫",
+            concerns: "",
+            promises: "",
+            nextAction: "",
+            followUpDate: toDateInput(addDays(new Date(), 1)),
+            quotes: ""
+          },
+          debriefSuggestionDone: [],
+          selectedAdvisorBloggerId: "",
+          advisorDecisions: loadAdvisorDecisions(),
+          debriefFilter: "all",
+          debriefSearch: "",
+          expandedDebriefs: {},
+          advisorInput: {
+            name: "",
+            size: "小博主",
+            intent: "半约",
+            field: "生活",
+            performance: ""
+          },
+          bulkImportText: "",
+          bulkImportPreview: [],
+          bulkImportMessage: "",
+          restoreText: ""
+        };
+      },
+      computed: {
+        currentTitle() {
+          const found = this.navItems.find(item => item.id === this.activeView);
+          return found ? found.label : "SignFlow";
+        },
+        viewKicker() {
+          const map = {
+            dashboard: "全局视图",
+            schedule: "下周密集约谈",
+            bloggers: "CRM 数据库",
+            pipeline: "签约到履约",
+            debrief: "每次聊完的沉淀",
+            advisor: "规则引擎辅助",
+            settings: "导入与备份"
+          };
+          return map[this.activeView] || "SignFlow";
+        },
+        weekDays() {
+          const labels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+          return labels.map((label, index) => {
+            const date = addDays(this.currentWeekStart, index);
+            return {
+              label,
+              date: toDateInput(date),
+              shortDate: `${date.getMonth() + 1}/${date.getDate()}`
+            };
+          });
+        },
+        weekRangeText() {
+          const first = this.weekDays[0];
+          const last = this.weekDays[6];
+          return `${first.date} 至 ${last.date}`;
+        },
+        weekSchedules() {
+          const dates = new Set(this.weekDays.map(day => day.date));
+          return this.state.schedules.filter(item => dates.has(item.date));
+        },
+        todaySchedules() {
+          const today = toDateInput(new Date());
+          return this.state.schedules
+            .filter(item => item.date === today)
+            .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot));
+        },
+        pendingSchedules() {
+          return this.state.schedules.filter(item => item.status === "pending");
+        },
+        signedCount() {
+          return this.state.bloggers.filter(item => item.stage === "已签").length;
+        },
+        followUpItems() {
+          const today = toDateInput(new Date());
+          return this.state.bloggers
+            .filter(blogger => {
+              const completed = this.isFollowUpCompleted(blogger);
+              if (["已拒"].includes(blogger.stage)) return false;
+              if (completed) return this.filters.showCompletedFollowups;
+              if (!blogger.followUpDate && !blogger.nextAction) return false;
+              return blogger.followUpDate <= today || blogger.priority === "高";
+            })
+            .map(blogger => {
+              const overdue = blogger.followUpDate && blogger.followUpDate < today;
+              const dueToday = blogger.followUpDate === today;
+              const completed = this.isFollowUpCompleted(blogger);
+              return {
+                id: `blogger_${blogger.id}`,
+                type: "blogger",
+                bloggerId: blogger.id,
+                level: completed ? "completed" : overdue ? "urgent" : dueToday ? "today" : "week",
+                levelText: completed ? "已完成" : overdue ? "逾期" : dueToday ? "今日" : "高优先级",
+                title: `${blogger.name} · ${blogger.nextAction || "需要跟进"}`,
+                detail: `${this.followUpLabel(blogger.followUpDate)} · ${blogger.stage} · ${blogger.priority || "中"}优先级`,
+                completed,
+                sortDate: blogger.followUpDate || "9999-12-31"
+              };
+            });
+        },
+        actionQueue() {
+          const weight = { urgent: 0, today: 1, week: 2, completed: 3 };
+          return [...this.followUpItems, ...this.reminders]
+            .sort((a, b) => {
+              const completedDiff = Number(a.level === "completed") - Number(b.level === "completed");
+              if (completedDiff) return completedDiff;
+              const levelDiff = (weight[a.level] ?? 3) - (weight[b.level] ?? 3);
+              if (levelDiff) return levelDiff;
+              return (a.sortDate || "").localeCompare(b.sortDate || "");
+            });
+        },
+        urgentActionCount() {
+          return this.todayActionItems.filter(item => item.level === "urgent").length;
+        },
+        highPriorityBloggers() {
+          return this.state.bloggers.filter(item => item.priority === "高" && !["已签", "已拒"].includes(item.stage));
+        },
+        filteredBloggers() {
+          const keyword = this.filters.search.trim().toLowerCase();
+          return this.state.bloggers.filter(blogger => {
+            const hitKeyword = !keyword || [blogger.name, blogger.wechatNote, blogger.contact]
+              .filter(Boolean)
+              .some(text => text.toLowerCase().includes(keyword));
+            const hitStage = !this.filters.stage || blogger.stage === this.filters.stage;
+            const hitSize = !this.filters.size || blogger.size === this.filters.size;
+            const hitFollowup = !this.filters.followupOnly || this.followUpItems.some(item => item.bloggerId === blogger.id);
+            return hitKeyword && hitStage && hitSize && hitFollowup;
+          }).sort((a, b) => {
+            const completedDiff = Number(this.isFollowUpCompleted(a)) - Number(this.isFollowUpCompleted(b));
+            if (completedDiff) return completedDiff;
+            return (a.followUpDate || "9999-12-31").localeCompare(b.followUpDate || "9999-12-31");
+          });
+        },
+        unscheduledBloggers() {
+          const scheduled = new Set(this.weekSchedules.map(item => item.bloggerId));
+          return this.state.bloggers.filter(blogger => {
+            return !scheduled.has(blogger.id) && !["已签", "已拒"].includes(blogger.stage);
+          });
+        },
+        visiblePipelines() {
+          if (!this.selectedPipelineBloggerId) return this.state.pipelines;
+          return this.state.pipelines.filter(item => item.bloggerId === this.selectedPipelineBloggerId);
+        },
+        pipelineRows() {
+          const rows = this.state.pipelines
+            .map(pipeline => {
+              const blogger = this.getBlogger(pipeline.bloggerId);
+              const doneCount = this.pipelineDoneCount(pipeline);
+              const firstOpen = pipeline.steps.find(step => !step.done);
+              const currentStep = firstOpen ? firstOpen.step : 11;
+              const hasOverdue = pipeline.steps.some(step => this.isStepOverdue(pipeline.bloggerId, step));
+              return { pipeline, blogger, doneCount, currentStep, hasOverdue, completed: doneCount === pipeline.steps.length };
+            })
+            .filter(row => row.blogger);
+
+          const filtered = rows.filter(row => {
+            if (this.selectedPipelineBloggerId && row.pipeline.bloggerId !== this.selectedPipelineBloggerId) return false;
+            if (this.pipelineFilter === "active") return !row.completed && row.blogger.stage !== "已拒";
+            if (this.pipelineFilter === "completed") return row.completed;
+            if (this.pipelineFilter === "overdue") return row.hasOverdue;
+            return true;
+          });
+
+          return filtered.sort((a, b) => {
+            if (this.pipelineSort === "current") return a.currentStep - b.currentStep || a.blogger.name.localeCompare(b.blogger.name);
+            if (this.pipelineSort === "progress") return a.doneCount - b.doneCount || a.blogger.name.localeCompare(b.blogger.name);
+            return a.blogger.name.localeCompare(b.blogger.name);
+          });
+        },
+        currentStepText() {
+          return (bloggerId) => {
+            const pipeline = this.bloggerPipeline(bloggerId);
+            if (!pipeline) return "未开始";
+            const firstOpen = pipeline.steps.find(step => !step.done);
+            if (!firstOpen) return "已完成";
+            return `${firstOpen.step}/10 ${pipelineShortLabels[firstOpen.step - 1]}`;
+          };
+        },
+        todayActionItems() {
+          const scheduleItems = this.todaySchedules.map(item => ({
+            id: `schedule_${item.id}`,
+            type: "schedule",
+            scheduleId: item.id,
+            bloggerId: item.bloggerId,
+            level: this.isSchedulePast(item) && !this.isScheduleDone(item) ? "urgent" : "today",
+            levelText: this.isScheduleDone(item) ? "已完成" : this.isSchedulePast(item) ? "需确认" : "约谈",
+            icon: "calendar",
+            title: `${this.bloggerName(item.bloggerId)} ${this.timeLabel(item.timeSlot)}`,
+            detail: item.prepNotes || "暂无准备事项",
+            sortDate: `${item.date} ${item.timeSlot}`
+          }));
+          const reminderItems = this.reminders.map(item => ({
+            ...item,
+            icon: item.actionStep === 4 ? "file-text" : item.actionStep === 9 ? "bell" : item.actionStep === 10 ? "clipboard-list" : "bell"
+          }));
+          const followItems = this.followUpItems.map(item => ({ ...item, icon: item.completed ? "check-circle" : "bell" }));
+          const weight = { urgent: 0, today: 1, week: 2, completed: 3 };
+          return [...scheduleItems, ...reminderItems, ...followItems].sort((a, b) => {
+            const completedDiff = Number(a.level === "completed") - Number(b.level === "completed");
+            if (completedDiff) return completedDiff;
+            const levelDiff = (weight[a.level] ?? 3) - (weight[b.level] ?? 3);
+            if (levelDiff) return levelDiff;
+            return (a.sortDate || "").localeCompare(b.sortDate || "");
+          });
+        },
+        dashboardFollowItems() {
+          const seen = new Set();
+          return this.todayActionItems
+            .filter(item => item.type !== "schedule")
+            .filter(item => {
+              if (seen.has(item.bloggerId)) return false;
+              seen.add(item.bloggerId);
+              return true;
+            });
+        },
+        actionBanner() {
+          const urgent = this.todayActionItems.filter(item => item.level === "urgent");
+          if (urgent.length) {
+            return {
+              tone: "urgent",
+              text: `紧急：${urgent.slice(0, 3).map(item => item.title).join(" | ")}${urgent.length > 3 ? " ..." : ""}`
+            };
+          }
+          if (this.todaySchedules.length) {
+            return {
+              tone: "schedule",
+              text: `今日约谈：${this.todaySchedules.map(item => `${this.bloggerName(item.bloggerId)}(${item.timeSlot})`).join(" | ")}`
+            };
+          }
+          return { tone: "clear", text: "今日无排期，可以处理积压博主" };
+        },
+        debriefSuggestions() {
+          return this.makeDebriefSuggestions(this.debriefForm.feeling, this.debriefForm.intentChange);
+        },
+        debriefsNewest() {
+          return [...this.state.debriefs].sort((a, b) => `${b.date}${b.id}`.localeCompare(`${a.date}${a.id}`));
+        },
+        filteredDebriefs() {
+          const keyword = this.debriefSearch.trim().toLowerCase();
+          return this.debriefsNewest.filter(record => {
+            const blogger = this.getBlogger(record.bloggerId);
+            const hitKeyword = !keyword || blogger?.name.toLowerCase().includes(keyword);
+            const hitFilter =
+              this.debriefFilter === "all" ||
+              (this.debriefFilter === "need" && !!record.nextAction && record.followUpStatus !== "completed") ||
+              (this.debriefFilter === "completed" && record.followUpStatus === "completed") ||
+              (this.debriefFilter === "rejected" && record.intentChange === "明确拒绝");
+            return hitKeyword && hitFilter;
+          });
+        },
+        advisorResult() {
+          const base = {
+            "小博主": {
+              focus: "强调成长机会和资源支持",
+              script: "我们能给你什么：流量扶持、选题指导、商单对接，以及更稳定的内容节奏。",
+              warning: "不要一上来谈分成比例，先建立信任，让对方感到不是被管理，而是被托举。",
+              rate: "高（60-70%）",
+              concerns: ["怕被绑定", "怕没自由度", "不确定MCN能给什么"]
+            },
+            "中博主": {
+              focus: "强调商单对接能力和变现效率",
+              script: "用已有商单案例说明合作后能少掉谈客户、筛品牌、反复改需求的成本。",
+              warning: "他们最关心分成比例和独家限制，需要先把边界讲清楚。",
+              rate: "中（40-50%）",
+              concerns: ["分成比例不满意", "怕丧失接单自由", "已有其他MCN在谈"]
+            },
+            "大博主": {
+              focus: "强调顶级资源和品牌合作机会",
+              script: "展示能对接到个人对接不到的品牌、活动、发布会或跨界资源。",
+              warning: "必须展示实力案例，不能画饼；所有承诺都要落到资源、案例和时间点。",
+              rate: "低（20-30%）",
+              concerns: ["MCN能否真的给到增量", "独家条款太严", "现有收入已经够好"]
+            }
+          };
+          const picked = base[this.advisorInput.size] || base["小博主"];
+          let advice = "先用半约降低心理门槛，强调灵活性，同时明确能享受的商单资源。";
+          if (this.advisorInput.intent === "全约") {
+            advice = "明确独家内容范围，预留博主个人品牌空间，减少被绑定的感受。";
+          } else if (this.advisorInput.intent === "未确认") {
+            advice = "先不催意向，围绕她当下的增长卡点和变现卡点做一次诊断式沟通。";
+          }
+          return { ...picked, advice };
+        },
+        advisorCategories() {
+          const makeItem = (id, title, detail, bloggerId = "") => ({ id, title, detail, bloggerId });
+          const urgent = this.todayActionItems
+            .filter(item => item.level === "urgent")
+            .map(item => makeItem(`urgent_${item.id}`, item.title, item.detail, item.bloggerId));
+          const recommended = this.todayActionItems
+            .filter(item => item.level === "today")
+            .slice(0, 6)
+            .map(item => makeItem(`recommend_${item.id}`, item.title, item.detail, item.bloggerId));
+          const optimize = this.highPriorityBloggers
+            .filter(blogger => !blogger.nextAction)
+            .slice(0, 6)
+            .map(blogger => makeItem(
+              `optimize_${blogger.id}`,
+              `${blogger.name} 需要补一条明确下一步`,
+              `${blogger.stage} · ${blogger.priority || "中"}优先级 · 建议写清下一次触达动作。`,
+              blogger.id
+            ));
+
+          const fallback = makeItem(
+            "optimize_rule_engine",
+            "把策略建议保存成下一步动作",
+            "选择一个博主后，可将当前规则引擎重点直接保存为今日下一步。"
+          );
+          const groups = [
+            { id: "urgent", title: "紧急行动（今日必须做）", items: urgent },
+            { id: "recommended", title: "推荐行动（本周建议做）", items: recommended },
+            { id: "optimize", title: "优化建议（可以改进的）", items: optimize.length ? optimize : [fallback] }
+          ];
+          return groups.map(group => ({
+            ...group,
+            items: group.items
+              .filter(item => this.advisorDecisions[item.id] !== "ignored")
+              .sort((a, b) => Number(this.advisorDecisions[a.id] === "adopted") - Number(this.advisorDecisions[b.id] === "adopted"))
+          }));
+        },
+        reminders() {
+          const items = [];
+          const now = new Date();
+
+          this.state.pipelines.forEach(pipeline => {
+            const blogger = this.getBlogger(pipeline.bloggerId);
+            if (!blogger) return;
+            const step3 = pipeline.steps.find(step => step.step === 3);
+            const step4 = pipeline.steps.find(step => step.step === 4);
+            const step5 = pipeline.steps.find(step => step.step === 5);
+            const step9 = pipeline.steps.find(step => step.step === 9);
+            const step10 = pipeline.steps.find(step => step.step === 10);
+
+            if (step3?.done && !step4?.done && this.daysSince(step3.doneAt) >= 3) {
+              items.push({
+                id: `contract_${pipeline.id}`,
+                type: "pipeline",
+                bloggerId: pipeline.bloggerId,
+                actionStep: 4,
+                level: "urgent",
+                levelText: "紧急",
+                title: `${blogger.name} 合同超3天未确认`,
+                detail: "建议今天补充合同重点，降低对方阅读和确认成本。",
+                sortDate: toDateInput(new Date())
+              });
+            }
+
+            const completedSchedule = this.state.schedules
+              .filter(item => item.bloggerId === pipeline.bloggerId && ["talked", "completed"].includes(item.status))
+              .sort((a, b) => b.date.localeCompare(a.date))[0];
+            if (completedSchedule && !step9?.done) {
+              const completedAt = new Date(`${completedSchedule.date}T${completedSchedule.timeSlot}:00`);
+              const hours = (now - completedAt) / 36e5;
+              if (hours >= 24) {
+                items.push({
+                  id: `follow_${pipeline.id}`,
+                  type: "pipeline",
+                  bloggerId: pipeline.bloggerId,
+                  actionStep: 9,
+                  level: "today",
+                  levelText: "今日",
+                  title: `${blogger.name} 需要次日回访`,
+                  detail: "沟通完成已超过24小时，适合轻触达跟进。",
+                  sortDate: completedSchedule.date
+                });
+              }
+            }
+
+            if (step5?.done && !step10?.done && this.daysSince(step5.doneAt) >= 30) {
+              items.push({
+                id: `deep_${pipeline.id}`,
+                type: "pipeline",
+                bloggerId: pipeline.bloggerId,
+                actionStep: 10,
+                level: "week",
+                levelText: "本周",
+                title: `${blogger.name} 需要月度深度对谈`,
+                detail: "签约已满30天，建议复盘内容方向和商务节奏。",
+                sortDate: toDateInput(new Date())
+              });
+            }
+          });
+
+          return items;
+        }
+      },
+      watch: {
+        state: {
+          deep: true,
+          handler(value) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+          }
+        },
+        sidebarCollapsed(value) {
+          localStorage.setItem(SIDEBAR_COLLAPSED_KEY, value ? "true" : "false");
+        },
+        advisorDecisions: {
+          deep: true,
+          handler(value) {
+            localStorage.setItem(ADVISOR_DECISIONS_KEY, JSON.stringify(value));
+          }
+        }
+      },
+      mounted() {
+        this.ensureBloggerDefaults();
+        this.ensureDebriefDefaults();
+        this.ensurePipelines();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+        this.refreshIcons();
+      },
+      updated() {
+        this.refreshIcons();
+      },
+      methods: {
+        refreshIcons() {
+          this.$nextTick(() => {
+            if (window.lucide) window.lucide.createIcons();
+          });
+        },
+        toggleSidebar() {
+          this.sidebarCollapsed = !this.sidebarCollapsed;
+        },
+        resetDemoData() {
+          if (!confirm("确认重置为示例数据？当前本地数据会被覆盖。")) return;
+          this.state = seedData();
+          this.selectedPipelineBloggerId = "";
+          this.activeView = "dashboard";
+        },
+        countStage(stage) {
+          return this.state.bloggers.filter(item => item.stage === stage).length;
+        },
+        stagePercent(stage) {
+          if (!this.state.bloggers.length) return 0;
+          return Math.round(this.countStage(stage) / this.state.bloggers.length * 100);
+        },
+        getBlogger(id) {
+          return this.state.bloggers.find(item => item.id === id);
+        },
+        bloggerName(id) {
+          return this.getBlogger(id)?.name || "未知博主";
+        },
+        bloggerPipeline(id) {
+          return this.state.pipelines.find(item => item.bloggerId === id);
+        },
+        ensurePipelines() {
+          this.state.bloggers.forEach(blogger => {
+            if (!this.bloggerPipeline(blogger.id)) {
+              this.state.pipelines.push({
+                id: uid("pipeline"),
+                bloggerId: blogger.id,
+                steps: createSteps(0)
+              });
+            }
+          });
+        },
+        ensureBloggerDefaults() {
+          this.state.bloggers.forEach(blogger => {
+            if (!blogger.priority) blogger.priority = "中";
+            if (typeof blogger.nextAction !== "string") blogger.nextAction = "";
+            if (typeof blogger.followUpDate !== "string") blogger.followUpDate = "";
+            if (typeof blogger.lastFollowUpAt !== "string") blogger.lastFollowUpAt = "";
+            if (!["active", "completed"].includes(blogger.followUpStatus)) blogger.followUpStatus = "active";
+            if (typeof blogger.followUpCompletedAt !== "string") blogger.followUpCompletedAt = "";
+            if (!Array.isArray(blogger.links)) blogger.links = [];
+          });
+        },
+        ensureDebriefDefaults() {
+          this.state.debriefs.forEach(record => {
+            if (!["active", "completed"].includes(record.followUpStatus)) record.followUpStatus = "active";
+            if (typeof record.followUpCompletedAt !== "string") record.followUpCompletedAt = "";
+            if (typeof record.archived !== "boolean") record.archived = false;
+          });
+        },
+        stepShortLabel(stepNumber) {
+          return pipelineShortLabels[stepNumber - 1] || `Step ${stepNumber}`;
+        },
+        currentPipelineStep(bloggerId) {
+          const pipeline = this.bloggerPipeline(bloggerId);
+          if (!pipeline) return 1;
+          const firstOpen = pipeline.steps.find(step => !step.done);
+          return firstOpen ? firstOpen.step : 10;
+        },
+        currentStepDisplay(bloggerId) {
+          const pipeline = this.bloggerPipeline(bloggerId);
+          if (!pipeline) return "1/10";
+          const firstOpen = pipeline.steps.find(step => !step.done);
+          const current = firstOpen ? firstOpen.step : 10;
+          return `${current}/10`;
+        },
+        hasPipelineOverdue(bloggerId) {
+          const pipeline = this.bloggerPipeline(bloggerId);
+          return !!pipeline?.steps.some(step => this.isStepOverdue(bloggerId, step));
+        },
+        hasContractSent(bloggerId) {
+          const pipeline = this.bloggerPipeline(bloggerId);
+          return !!pipeline?.steps.find(step => step.step === 3)?.done && !pipeline?.steps.find(step => step.step === 4)?.done;
+        },
+        pipelineStatusClass(row) {
+          if (row.blogger.stage === "已签") return "signed";
+          if (row.blogger.stage === "已拒") return "rejected";
+          if (["待沟通", "已约"].includes(row.blogger.stage)) return "pending";
+          return "active";
+        },
+        lastContactDate(bloggerId) {
+          const latestDebrief = this.state.debriefs
+            .filter(item => item.bloggerId === bloggerId)
+            .sort((a, b) => b.date.localeCompare(a.date))[0];
+          const latestSchedule = this.state.schedules
+            .filter(item => item.bloggerId === bloggerId && ["talked", "completed"].includes(item.status))
+            .sort((a, b) => b.date.localeCompare(a.date))[0];
+          return latestDebrief?.date || latestSchedule?.date || "暂无";
+        },
+        bloggerDebriefs(bloggerId) {
+          return this.state.debriefs
+            .filter(item => item.bloggerId === bloggerId)
+            .sort((a, b) => b.date.localeCompare(a.date));
+        },
+        toggleDebriefDetail(id) {
+          this.expandedDebriefs = {
+            ...this.expandedDebriefs,
+            [id]: !this.expandedDebriefs[id]
+          };
+        },
+        markDebriefFollowed(record) {
+          record.followUpStatus = "completed";
+          record.followUpCompletedAt = new Date().toISOString();
+          const blogger = this.getBlogger(record.bloggerId);
+          if (blogger) {
+            blogger.followUpStatus = "completed";
+            blogger.followUpCompletedAt = record.followUpCompletedAt;
+            blogger.lastFollowUpAt = record.followUpCompletedAt;
+            blogger.updatedAt = new Date().toISOString();
+          }
+        },
+        archiveDebrief(record) {
+          record.archived = true;
+        },
+        setAdvisorDecision(id, decision) {
+          this.advisorDecisions = { ...this.advisorDecisions, [id]: decision };
+        },
+        resetAdvisorDecisions() {
+          this.advisorDecisions = {};
+        },
+        pipelineStepClass(bloggerId, step) {
+          return {
+            done: step.done,
+            overdue: this.isStepOverdue(bloggerId, step)
+          };
+        },
+        pipelineStepOptionLabel(stepNumber) {
+          return this.stepShortLabel(stepNumber);
+        },
+        quickTogglePipelineStep(pipeline, step) {
+          if (!pipeline || !step) return;
+          const now = new Date().toISOString();
+          step.done = !step.done;
+          step.doneAt = step.done ? now : null;
+          if (step.done) this.syncBloggerFromPipeline(pipeline.bloggerId, step.step, true);
+          this.syncBloggerStageFromPipeline(pipeline.bloggerId, { allowRollback: !step.done });
+          const blogger = this.getBlogger(pipeline.bloggerId);
+          if (blogger) blogger.updatedAt = now;
+          this.refreshIcons();
+        },
+        setPipelineProgress(pipeline, completedStep) {
+          if (!pipeline) return;
+          const totalSteps = pipeline.steps.length;
+          const targetStep = Math.max(0, Math.min(Number(completedStep) || 0, totalSteps));
+          const now = new Date().toISOString();
+          const newlyCompletedSteps = [];
+
+          pipeline.steps.forEach(step => {
+            const shouldBeDone = step.step <= targetStep;
+            if (shouldBeDone && !step.done) {
+              step.done = true;
+              step.doneAt = now;
+              newlyCompletedSteps.push(step.step);
+            }
+            if (!shouldBeDone && step.done) {
+              step.done = false;
+              step.doneAt = null;
+            }
+          });
+
+          newlyCompletedSteps.forEach(stepNumber => {
+            this.syncBloggerFromPipeline(pipeline.bloggerId, stepNumber, true);
+          });
+          this.syncBloggerStageFromPipeline(pipeline.bloggerId, { allowRollback: true });
+          const blogger = this.getBlogger(pipeline.bloggerId);
+          if (blogger) blogger.updatedAt = now;
+          this.refreshIcons();
+        },
+        markPipelineStep(bloggerId, stepNumber, note = "") {
+          const pipeline = this.bloggerPipeline(bloggerId);
+          const step = pipeline?.steps.find(item => item.step === stepNumber);
+          if (!step) return;
+          if (!step.done) {
+            step.done = true;
+            step.doneAt = new Date().toISOString();
+          }
+          if (note && !step.note) step.note = note;
+        },
+        syncBloggerFromPipeline(bloggerId, stepNumber, done) {
+          const blogger = this.getBlogger(bloggerId);
+          if (!blogger || !done) return;
+          if (stepNumber === 1 && blogger.stage === "已约") blogger.stage = "已聊";
+          if (stepNumber === 3) {
+            blogger.nextAction = "合同已发，等待博主确认合同内容。";
+            blogger.followUpDate = toDateInput(addDays(new Date(), 3));
+            this.resetFollowUpStatus(blogger);
+          }
+          if (stepNumber === 5) {
+            blogger.stage = "已签";
+          }
+          blogger.updatedAt = new Date().toISOString();
+        },
+        syncBloggerStageFromPipeline(bloggerId, { allowRollback = false } = {}) {
+          const blogger = this.getBlogger(bloggerId);
+          const pipeline = this.bloggerPipeline(bloggerId);
+          if (!blogger || !pipeline || blogger.stage === "已拒") return;
+
+          const stepDone = stepNumber => !!pipeline.steps.find(step => step.step === stepNumber)?.done;
+          const firstTalkDone = stepDone(1);
+          const contractInProgress = stepDone(3) || stepDone(4);
+          const signedDone = stepDone(5);
+
+          if (signedDone) {
+            blogger.stage = "已签";
+            return;
+          }
+
+          if (contractInProgress && ["待沟通", "已约", "已聊", "谈判中"].includes(blogger.stage)) {
+            blogger.stage = "谈判中";
+            return;
+          }
+
+          if (firstTalkDone && ["待沟通", "已约", "已聊"].includes(blogger.stage)) {
+            blogger.stage = "已聊";
+            return;
+          }
+
+          if (!allowRollback) return;
+
+          if (blogger.stage === "已签") {
+            blogger.stage = contractInProgress ? "谈判中" : firstTalkDone ? "已聊" : "已约";
+          }
+          if (blogger.stage === "谈判中" && !contractInProgress) {
+            blogger.stage = firstTalkDone ? "已聊" : "已约";
+          }
+        },
+        followUpLabel(date) {
+          if (!date) return "未设置日期";
+          const today = toDateInput(new Date());
+          const tomorrow = toDateInput(addDays(new Date(), 1));
+          if (date < today) return `逾期 ${date}`;
+          if (date === today) return "今天";
+          if (date === tomorrow) return "明天";
+          return date;
+        },
+        actionClass(item) {
+          if (item.level === "completed") return "action-week";
+          if (item.level === "urgent") return "action-urgent";
+          if (item.level === "today") return "action-today";
+          return "action-week";
+        },
+        isFollowUpCompleted(blogger) {
+          return blogger?.followUpStatus === "completed";
+        },
+        resetFollowUpStatus(blogger) {
+          if (!blogger) return;
+          blogger.followUpStatus = "active";
+          blogger.followUpCompletedAt = "";
+        },
+        isScheduleDone(schedule) {
+          return ["talked", "completed", "cancelled"].includes(schedule?.status);
+        },
+        setFollowUpDate(days) {
+          this.debriefForm.followUpDate = toDateInput(addDays(new Date(), days));
+        },
+        completeActionItem(item) {
+          if (item.type === "schedule") {
+            const schedule = this.state.schedules.find(target => target.id === item.scheduleId);
+            if (schedule) this.setScheduleStatus(schedule, "completed");
+            return;
+          }
+          if (item.type === "blogger") {
+            const blogger = this.getBlogger(item.bloggerId);
+            if (!blogger) return;
+            blogger.lastFollowUpAt = new Date().toISOString();
+            blogger.followUpStatus = "completed";
+            blogger.followUpCompletedAt = new Date().toISOString();
+            blogger.updatedAt = new Date().toISOString();
+            return;
+          }
+          if (item.type === "pipeline" && item.actionStep) {
+            const pipeline = this.bloggerPipeline(item.bloggerId);
+            const step = pipeline?.steps.find(target => target.step === item.actionStep);
+            if (step && !step.done) {
+              step.done = true;
+              step.doneAt = new Date().toISOString();
+              step.note = step.note || "从首页待办完成";
+            }
+            const blogger = this.getBlogger(item.bloggerId);
+            if (blogger) {
+              blogger.updatedAt = new Date().toISOString();
+              if (item.actionStep === 9) {
+                blogger.lastFollowUpAt = new Date().toISOString();
+                blogger.followUpStatus = "completed";
+                blogger.followUpCompletedAt = new Date().toISOString();
+              }
+              if (item.actionStep === 10) {
+                blogger.nextAction = "月度深度对谈已完成，等待下一轮内容/商务复盘。";
+                blogger.followUpDate = toDateInput(addDays(new Date(), 30));
+                this.resetFollowUpStatus(blogger);
+              }
+            }
+          }
+        },
+        snoozeActionItem(item, days = 1) {
+          const blogger = this.getBlogger(item.bloggerId);
+          if (!blogger) return;
+          blogger.followUpDate = toDateInput(addDays(new Date(), days));
+          if (!blogger.nextAction) blogger.nextAction = item.title.replace(`${blogger.name} · `, "");
+          this.resetFollowUpStatus(blogger);
+          blogger.updatedAt = new Date().toISOString();
+        },
+        openDebriefFor(bloggerId) {
+          this.debriefForm.bloggerId = bloggerId;
+          this.debriefForm.date = toDateInput(new Date());
+          this.debriefForm.followUpDate = toDateInput(addDays(new Date(), 1));
+          this.activeView = "debrief";
+        },
+        openAdvisorFor(bloggerId) {
+          this.applyAdvisorBlogger(bloggerId);
+          this.activeView = "advisor";
+        },
+        setScheduleStatus(schedule, status) {
+          const target = this.state.schedules.find(item => item.id === schedule.id);
+          if (!target) return;
+          target.status = status;
+          const blogger = this.getBlogger(target.bloggerId);
+          if (!blogger) return;
+          if (status === "confirmed") {
+            blogger.stage = "已约";
+          }
+          if (status === "talked" || status === "completed") {
+            blogger.stage = "已聊";
+            blogger.nextAction = "次日回访：确认沟通感受，并推动下一步签约动作。";
+            blogger.followUpDate = toDateInput(addDays(new Date(), 1));
+            this.resetFollowUpStatus(blogger);
+            const pipeline = this.bloggerPipeline(blogger.id);
+            const first = pipeline?.steps.find(step => step.step === 1);
+            if (first && !first.done) {
+              first.done = true;
+              first.doneAt = new Date().toISOString();
+            }
+          }
+          blogger.updatedAt = new Date().toISOString();
+        },
+        pipelineDoneCount(pipeline) {
+          return pipeline.steps.filter(step => step.done).length;
+        },
+        pipelineDoneThrough(pipeline) {
+          if (!pipeline) return 0;
+          let doneThrough = 0;
+          for (const step of pipeline.steps) {
+            if (!step.done) break;
+            doneThrough += 1;
+          }
+          return doneThrough;
+        },
+        pipelineProgress(bloggerId) {
+          const pipeline = this.bloggerPipeline(bloggerId);
+          if (!pipeline) return 0;
+          return Math.round(this.pipelineDoneCount(pipeline) / pipeline.steps.length * 100);
+        },
+        dayScheduleCount(date) {
+          return this.state.schedules.filter(item => item.date === date && item.status !== "cancelled").length;
+        },
+        scheduleAt(date, timeSlot) {
+          return this.state.schedules.find(item => item.date === date && item.timeSlot === timeSlot);
+        },
+        scheduleStatusLabel(status) {
+          return {
+            pending: "已约未确认",
+            confirmed: "已确认",
+            talked: "已约已聊",
+            completed: "已完成沟通",
+            cancelled: "爽约/取消"
+          }[status] || status;
+        },
+        timeLabel(slot) {
+          const hour = Number(slot.slice(0, 2));
+          return `${slot}-${String(hour + 1).padStart(2, "0")}:00`;
+        },
+        isSchedulePast(schedule) {
+          if (!schedule || this.isScheduleDone(schedule)) return false;
+          const endHour = Number(schedule.timeSlot.slice(0, 2)) + 1;
+          const endTime = new Date(`${schedule.date}T${String(endHour).padStart(2, "0")}:00:00`);
+          return new Date() > endTime;
+        },
+        scheduleBloggerOptions(currentId = "") {
+          return this.state.bloggers.filter(blogger => {
+            if (blogger.id === currentId) return true;
+            if (["已签", "已拒"].includes(blogger.stage)) return false;
+            return ["待沟通", "已约"].includes(blogger.stage) || blogger.intent === "未确认";
+          });
+        },
+        moveWeek(offset) {
+          this.currentWeekStart = addDays(this.currentWeekStart, offset * 7);
+        },
+        goThisWeek() {
+          this.currentWeekStart = startOfWeek(new Date());
+        },
+        openSchedule(date, timeSlot, bloggerId = "") {
+          const existing = this.scheduleAt(date, timeSlot);
+          if (!existing && this.dayScheduleCount(date) >= 5) {
+            alert("今日已满，最多安排 5 个约谈。");
+            return;
+          }
+          this.scheduleForm = existing
+            ? { ...existing }
+            : {
+                id: "",
+                bloggerId,
+                date,
+                timeSlot,
+                status: "pending",
+                prepNotes: ""
+              };
+          this.scheduleModalOpen = true;
+        },
+        closeSchedule() {
+          this.scheduleModalOpen = false;
+          this.scheduleForm = {};
+        },
+        handleScheduleCardClick(schedule) {
+          if (this.scheduleClickTimer) clearTimeout(this.scheduleClickTimer);
+          this.scheduleClickTimer = setTimeout(() => {
+            const blogger = this.getBlogger(schedule.bloggerId);
+            if (blogger) this.openBloggerForm(blogger);
+            this.scheduleClickTimer = null;
+          }, 220);
+        },
+        editScheduleFromCard(date, timeSlot) {
+          if (this.scheduleClickTimer) {
+            clearTimeout(this.scheduleClickTimer);
+            this.scheduleClickTimer = null;
+          }
+          this.openSchedule(date, timeSlot);
+        },
+        toggleScheduleTalked(schedule) {
+          if (this.scheduleClickTimer) {
+            clearTimeout(this.scheduleClickTimer);
+            this.scheduleClickTimer = null;
+          }
+          if (!schedule || schedule.status !== "pending") return;
+          this.setScheduleStatus(schedule, "talked");
+        },
+        saveSchedule() {
+          const data = { ...this.scheduleForm };
+          if (!data.bloggerId) return;
+          const existingIndex = this.state.schedules.findIndex(item => item.id === data.id);
+          if (existingIndex >= 0) {
+            this.state.schedules[existingIndex] = data;
+          } else {
+            data.id = uid("schedule");
+            this.state.schedules.push(data);
+          }
+          const blogger = this.getBlogger(data.bloggerId);
+          if (blogger) {
+            blogger.stage = ["talked", "completed"].includes(data.status) ? "已聊" : data.status === "cancelled" ? blogger.stage : "已约";
+            if (["talked", "completed"].includes(data.status)) {
+              blogger.nextAction = blogger.nextAction || "次日回访：确认沟通感受，并推动下一步签约动作。";
+              blogger.followUpDate = blogger.followUpDate || toDateInput(addDays(new Date(), 1));
+              this.resetFollowUpStatus(blogger);
+              const pipeline = this.bloggerPipeline(blogger.id);
+              const first = pipeline?.steps.find(step => step.step === 1);
+              if (first && !first.done) {
+                first.done = true;
+                first.doneAt = new Date().toISOString();
+              }
+            }
+            blogger.updatedAt = new Date().toISOString();
+          }
+          this.ensurePipelines();
+          this.closeSchedule();
+        },
+        deleteSchedule(id) {
+          if (!id) return;
+          if (!confirm("确认取消/删除这个排期吗？")) return;
+          this.state.schedules = this.state.schedules.filter(item => item.id !== id);
+          this.closeSchedule();
+        },
+        dragBlogger(id) {
+          this.draggingBloggerId = id;
+          this.draggingScheduleId = null;
+        },
+        dragSchedule(id) {
+          this.draggingScheduleId = id;
+          this.draggingBloggerId = null;
+        },
+        clearDragState() {
+          this.draggingBloggerId = null;
+          this.draggingScheduleId = null;
+        },
+        moveExistingSchedule(id, date, timeSlot) {
+          const moving = this.state.schedules.find(item => item.id === id);
+          if (!moving) return;
+          const existing = this.scheduleAt(date, timeSlot);
+          if (existing && existing.id !== id) {
+            alert("这个时间已经有排期了，请先取消原排期，或拖到其他空闲格。");
+            return;
+          }
+          if (existing?.id === id) return;
+          if (moving.date !== date && this.dayScheduleCount(date) >= 5) {
+            alert("今日已满，最多安排 5 个约谈。");
+            return;
+          }
+          moving.date = date;
+          moving.timeSlot = timeSlot;
+          const blogger = this.getBlogger(moving.bloggerId);
+          if (blogger) blogger.updatedAt = new Date().toISOString();
+        },
+        dropSchedule(date, timeSlot) {
+          if (this.draggingScheduleId) {
+            this.moveExistingSchedule(this.draggingScheduleId, date, timeSlot);
+            this.clearDragState();
+            return;
+          }
+          const id = this.draggingBloggerId;
+          if (!id) return;
+          const existing = this.scheduleAt(date, timeSlot);
+          if (existing) {
+            existing.bloggerId = id;
+            existing.status = "pending";
+          } else {
+            if (this.dayScheduleCount(date) >= 5) {
+              alert("今日已满，最多安排 5 个约谈。");
+              this.clearDragState();
+              return;
+            }
+            this.state.schedules.push({
+              id: uid("schedule"),
+              bloggerId: id,
+              date,
+              timeSlot,
+              status: "pending",
+              prepNotes: ""
+            });
+          }
+          const blogger = this.getBlogger(id);
+          if (blogger && blogger.stage === "待沟通") {
+            blogger.stage = "已约";
+            blogger.updatedAt = new Date().toISOString();
+          }
+          this.clearDragState();
+        },
+        bloggersByStage(stage) {
+          return this.filteredBloggers.filter(item => item.stage === stage);
+        },
+        dropKanban(stage) {
+          const blogger = this.getBlogger(this.draggingBloggerId);
+          if (!blogger) {
+            this.clearDragState();
+            return;
+          }
+          blogger.stage = stage;
+          if (stage === "已签") blogger.intent = blogger.intent === "未确认" ? "全约" : blogger.intent;
+          if (stage === "已拒") blogger.intent = "拒绝";
+          if (stage === "已签") this.markPipelineStep(blogger.id, 5, "从看板移动到已签");
+          blogger.updatedAt = new Date().toISOString();
+          this.clearDragState();
+        },
+        emptyBloggerForm() {
+          return {
+            id: "",
+            name: "",
+            platform: ["小红书"],
+            size: "小博主",
+            intent: "未确认",
+            stage: "待沟通",
+            field: "其他",
+            wechatNote: "",
+            contact: "",
+            concerns: "",
+            advantages: "",
+            notes: "",
+            links: [],
+            priority: "中",
+            nextAction: "",
+            followUpDate: "",
+            lastFollowUpAt: "",
+            followUpStatus: "active",
+            followUpCompletedAt: ""
+          };
+        },
+        openBloggerForm(blogger = null) {
+          this.bloggerForm = blogger ? { ...blogger, platform: [...blogger.platform], links: [...(blogger.links || [])] } : this.emptyBloggerForm();
+          this.bloggerModalMode = blogger ? "detail" : "quick";
+          this.bloggerDetailTab = "base";
+          this.bloggerModalOpen = true;
+          this.clearSmartBloggerInput(false);
+          this.captureBloggerFormSnapshot();
+        },
+        captureBloggerFormSnapshot() {
+          this.bloggerFormSnapshot = JSON.stringify(this.bloggerForm || {});
+        },
+        hasUnsavedBloggerChanges() {
+          if (!this.bloggerModalOpen || this.bloggerModalMode === "created") return false;
+          return JSON.stringify(this.bloggerForm || {}) !== this.bloggerFormSnapshot;
+        },
+        closeBloggerForm(force = false) {
+          if (force !== true && this.hasUnsavedBloggerChanges() && !confirm("有未保存的修改，确认关闭吗？")) return;
+          this.bloggerModalOpen = false;
+          this.bloggerForm = {};
+          this.bloggerFormSnapshot = "";
+          this.clearSmartBloggerInput(false);
+          this.lastCreatedBloggerId = "";
+          this.bloggerModalMode = "quick";
+          this.bloggerDetailTab = "base";
+        },
+        clearSmartBloggerInput(resetFeedback = true) {
+          this.smartBloggerInput = "";
+          if (resetFeedback !== false) this.smartBloggerFeedback = "";
+        },
+        cleanSmartValue(value) {
+          return String(value || "")
+            .replace(/^[：:，,。；;\s]+|[：:，,。；;\s]+$/g, "")
+            .trim();
+        },
+        extractSmartField(text, labels, options = {}) {
+          const escaped = labels
+            .slice()
+            .sort((a, b) => b.length - a.length)
+            .map(label => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+            .join("|");
+          const connector = options.requireConnector ? "\\s*(?:是|为|:|：|=)\\s*" : "\\s*(?:是|为|:|：|=|叫|叫做)?\\s*";
+          const match = text.match(new RegExp(`(?:${escaped})${connector}([^，。；;\\n]+)`, "i"));
+          return match ? this.cleanSmartValue(match[1]) : "";
+        },
+        parseSmartFollowUpDate(text) {
+          const today = new Date();
+          if (/大后天/.test(text)) return toDateInput(addDays(today, 3));
+          if (/后天/.test(text)) return toDateInput(addDays(today, 2));
+          if (/明天|明日/.test(text)) return toDateInput(addDays(today, 1));
+          if (/今天|今日/.test(text)) return toDateInput(today);
+          const daysMatch = text.match(/(\d{1,2})\s*天后/);
+          if (daysMatch) return toDateInput(addDays(today, Number(daysMatch[1])));
+          const weekMap = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 7, 天: 7 };
+          const nextWeekDay = text.match(/下周([一二三四五六日天])/);
+          if (nextWeekDay) return toDateInput(addDays(startOfWeek(addDays(today, 7)), weekMap[nextWeekDay[1]] - 1));
+          if (/下周/.test(text)) return toDateInput(addDays(today, 7));
+          const fullDate = text.match(/(20\d{2})[-/.年](\d{1,2})[-/.月](\d{1,2})/);
+          if (fullDate) return toDateInput(new Date(Number(fullDate[1]), Number(fullDate[2]) - 1, Number(fullDate[3])));
+          const monthDate = text.match(/(\d{1,2})[月/-](\d{1,2})[日号]?/);
+          if (monthDate) {
+            const candidate = new Date(today.getFullYear(), Number(monthDate[1]) - 1, Number(monthDate[2]));
+            if (candidate < startOfWeek(today)) candidate.setFullYear(candidate.getFullYear() + 1);
+            return toDateInput(candidate);
+          }
+          return "";
+        },
+        parseBloggerSmartInput(text) {
+          const normalized = text.replace(/\s+/g, " ").trim();
+          const result = {
+            name: "",
+            platforms: [],
+            size: "",
+            intent: "",
+            stage: "",
+            field: "",
+            priority: "",
+            followUpDate: "",
+            wechatNote: "",
+            contact: "",
+            concerns: "",
+            advantages: "",
+            nextAction: "",
+            notes: "",
+            links: []
+          };
+
+          const nameMatch = normalized.match(/(?:博主叫|名字叫|昵称叫|名称叫|博主名(?:字)?(?:是|叫)?|名字是|昵称是|名称是)\s*([^，。；;\n]+)/);
+          if (nameMatch) result.name = this.cleanSmartValue(nameMatch[1]);
+
+          const platformAliases = [
+            ["小红书", /小红书|xhs|red\s*note/i],
+            ["B站", /B站|B 站|bilibili|哔哩|哔哩哔哩/i],
+            ["抖音", /抖音|douyin/i],
+            ["公众号", /公众号|微信公众/i],
+            ["视频号", /视频号/i],
+            ["微博", /微博|weibo/i],
+            ["即刻", /即刻/i],
+            ["知乎", /知乎/i],
+            ["Twitter", /Twitter|推特/i]
+          ];
+          result.platforms = platformAliases.filter(([, pattern]) => pattern.test(normalized)).map(([platform]) => platform);
+
+          if (/大博主|头部|百万|100万|百万级/.test(normalized)) result.size = "大博主";
+          else if (/中博主|腰部|十万|10万|中腰部/.test(normalized)) result.size = "中博主";
+          else if (/小博主|尾部|万粉|素人|小号/.test(normalized)) result.size = "小博主";
+          const followerMatch = normalized.match(/(\d+(?:\.\d+)?)\s*(w|万)/i);
+          if (!result.size && followerMatch) {
+            const followers = Number(followerMatch[1]);
+            result.size = followers >= 100 ? "大博主" : followers >= 10 ? "中博主" : "小博主";
+          }
+
+          if (/半约|非独家|部分约|商务约/.test(normalized)) result.intent = "半约";
+          else if (/全约|全签|全案|接受独家|可以独家|独家签/.test(normalized)) result.intent = "全约";
+          else if (/拒绝|不签|没兴趣|暂不考虑/.test(normalized)) result.intent = "拒绝";
+          else if (/未确认|还没确认|犹豫|观望|待定/.test(normalized)) result.intent = "未确认";
+
+          if (/已签|签了|签约完成|合同签完/.test(normalized)) result.stage = "已签";
+          else if (/已拒|拒绝|不签|没兴趣|暂不考虑/.test(normalized)) result.stage = "已拒";
+          else if (/谈判中|谈判|谈价格|合同中|合同阶段/.test(normalized)) result.stage = "谈判中";
+          else if (/已聊|聊过|沟通完成|刚聊完/.test(normalized)) result.stage = "已聊";
+          else if (/已约|约了|排期|约谈/.test(normalized)) result.stage = "已约";
+          else if (/待沟通|未沟通|还没聊/.test(normalized)) result.stage = "待沟通";
+
+          const fieldAliases = [
+            ["美妆", /美妆|护肤|彩妆/i],
+            ["科技", /科技|数码|AI|人工智能|硬件/i],
+            ["生活", /生活|日常|vlog|家居/i],
+            ["知识", /知识|科普|学习|教育/i],
+            ["情感", /情感|恋爱|关系/i],
+            ["职场", /职场|工作|求职|职业/i],
+            ["母婴", /母婴|育儿|宝宝|亲子/i],
+            ["其他", /其他|综合/i]
+          ];
+          result.field = fieldAliases.find(([, pattern]) => pattern.test(normalized))?.[0] || "";
+
+          if (/高优先级|优先级高|重点|紧急|优先处理|很急/.test(normalized)) result.priority = "高";
+          else if (/低优先级|优先级低|不急|先放放/.test(normalized)) result.priority = "低";
+          else if (/中优先级|优先级中|正常推进/.test(normalized)) result.priority = "中";
+
+          result.followUpDate = this.parseSmartFollowUpDate(normalized);
+          result.wechatNote = this.extractSmartField(normalized, ["微信备注", "备注名", "微信名"]);
+          const phone = normalized.match(/1[3-9]\d{9}/)?.[0] || "";
+          const contact = this.extractSmartField(normalized, ["联系方式", "联系", "手机", "电话", "微信号", "wx", "v信"]);
+          result.contact = this.cleanSmartValue([contact, phone].filter(Boolean).join(" / "));
+          result.concerns = this.extractSmartField(normalized, ["顾虑", "担心", "担忧", "卡点", "问题"]);
+          result.advantages = this.extractSmartField(normalized, ["优势", "亮点", "卖点", "适合点"]);
+          result.nextAction = this.extractSmartField(normalized, ["下一步动作", "下一步", "后续", "动作", "计划"]);
+          result.notes = this.extractSmartField(normalized, ["备注", "补充", "记录"], { requireConnector: true });
+          result.links = [...normalized.matchAll(/https?:\/\/[^\s，。；;]+/g)].map(match => match[0]).slice(0, 5);
+          return result;
+        },
+        setSmartTextField(field, value, label, changed, append = false) {
+          const cleaned = this.cleanSmartValue(value);
+          if (!cleaned) return;
+          const current = this.bloggerForm[field] || "";
+          if (append && current && !current.includes(cleaned)) {
+            this.bloggerForm[field] = `${current}\n${cleaned}`;
+          } else {
+            this.bloggerForm[field] = cleaned;
+          }
+          if (!changed.includes(label)) changed.push(label);
+        },
+        applySmartBloggerInput() {
+          const text = this.smartBloggerInput.trim();
+          if (!text) {
+            this.smartBloggerFeedback = "先输入一段消息。";
+            return;
+          }
+          const parsed = this.parseBloggerSmartInput(text);
+          const changed = [];
+
+          if (parsed.name) this.setSmartTextField("name", parsed.name, "名称", changed);
+          if (parsed.platforms.length) {
+            const current = Array.isArray(this.bloggerForm.platform) ? this.bloggerForm.platform : [];
+            const legacy = current.filter(item => !platforms.includes(item));
+            const explicitPlatform = /(?:平台|账号|渠道).*?(?:是|为|只有|只在)/.test(text);
+            const nextPlatforms = explicitPlatform ? [...legacy, ...parsed.platforms] : [...current, ...parsed.platforms];
+            this.bloggerForm.platform = [...new Set(nextPlatforms)];
+            changed.push("平台");
+          }
+          if (parsed.size) {
+            this.bloggerForm.size = parsed.size;
+            changed.push("量级");
+          }
+          if (parsed.intent) {
+            this.bloggerForm.intent = parsed.intent;
+            changed.push("意向");
+          }
+          if (parsed.stage) {
+            this.bloggerForm.stage = parsed.stage;
+            changed.push("阶段");
+          }
+          if (parsed.field) {
+            this.bloggerForm.field = parsed.field;
+            changed.push("领域");
+          }
+          if (parsed.priority) {
+            this.bloggerForm.priority = parsed.priority;
+            changed.push("优先级");
+          }
+          if (parsed.followUpDate) {
+            this.bloggerForm.followUpDate = parsed.followUpDate;
+            changed.push("跟进日");
+          }
+          this.setSmartTextField("wechatNote", parsed.wechatNote, "微信备注", changed);
+          this.setSmartTextField("contact", parsed.contact, "联系方式", changed);
+          this.setSmartTextField("concerns", parsed.concerns, "顾虑", changed);
+          this.setSmartTextField("advantages", parsed.advantages, "优势", changed);
+          this.setSmartTextField("nextAction", parsed.nextAction, "下一步", changed);
+          this.setSmartTextField("notes", parsed.notes, "备注", changed, true);
+
+          if (parsed.links.length) {
+            if (!Array.isArray(this.bloggerForm.links)) this.bloggerForm.links = [];
+            parsed.links.forEach((url, index) => {
+              if (this.bloggerForm.links.length >= 5) return;
+              if (this.bloggerForm.links.some(link => link.url === url)) return;
+              this.bloggerForm.links.push({ id: uid("link"), name: index ? "智能识别链接" : "账号/资料链接", url });
+            });
+            changed.push("链接");
+          }
+
+          if (!changed.length) {
+            this.setSmartTextField("notes", text, "备注", changed, true);
+          }
+          this.smartBloggerFeedback = `已识别：${[...new Set(changed)].join("、")}`;
+        },
+        saveQuickBlogger() {
+          if (!this.bloggerForm.name.trim()) return;
+          const now = new Date().toISOString();
+          const data = {
+            ...this.emptyBloggerForm(),
+            name: this.bloggerForm.name.trim(),
+            size: this.bloggerForm.size || "小博主",
+            platform: this.bloggerForm.platform.length ? this.bloggerForm.platform : ["小红书"],
+            id: uid("blogger"),
+            createdAt: now,
+            updatedAt: now
+          };
+          this.state.bloggers.push(data);
+          this.state.pipelines.push({
+            id: uid("pipeline"),
+            bloggerId: data.id,
+            steps: createSteps(0)
+          });
+          this.lastCreatedBloggerId = data.id;
+          this.bloggerForm = { ...data, platform: [...data.platform], links: [] };
+          this.bloggerModalMode = "created";
+          this.captureBloggerFormSnapshot();
+        },
+        continueQuickCreate() {
+          this.bloggerForm = this.emptyBloggerForm();
+          this.lastCreatedBloggerId = "";
+          this.bloggerModalMode = "quick";
+          this.clearSmartBloggerInput(false);
+          this.captureBloggerFormSnapshot();
+        },
+        perfectLastCreated() {
+          const blogger = this.getBlogger(this.lastCreatedBloggerId);
+          if (!blogger) return;
+          this.bloggerForm = { ...blogger, platform: [...blogger.platform], links: [...(blogger.links || [])] };
+          this.bloggerModalMode = "detail";
+          this.bloggerDetailTab = "base";
+          this.clearSmartBloggerInput(false);
+          this.captureBloggerFormSnapshot();
+        },
+        addBloggerLink() {
+          if (!Array.isArray(this.bloggerForm.links)) this.bloggerForm.links = [];
+          if (this.bloggerForm.links.length >= 5) return;
+          this.bloggerForm.links.push({ id: uid("link"), name: "", url: "" });
+        },
+        removeBloggerLink(index) {
+          this.bloggerForm.links.splice(index, 1);
+        },
+        saveBlogger() {
+          const now = new Date().toISOString();
+          const data = {
+            ...this.bloggerForm,
+            platform: this.bloggerForm.platform.length ? this.bloggerForm.platform : ["小红书"],
+            links: (this.bloggerForm.links || []).filter(link => link.name || link.url).slice(0, 5),
+            priority: this.bloggerForm.priority || "中",
+            nextAction: this.bloggerForm.nextAction || "",
+            followUpDate: this.bloggerForm.followUpDate || "",
+            lastFollowUpAt: this.bloggerForm.lastFollowUpAt || "",
+            followUpStatus: this.bloggerForm.followUpStatus || "active",
+            followUpCompletedAt: this.bloggerForm.followUpCompletedAt || "",
+            updatedAt: now
+          };
+          const existingIndex = this.state.bloggers.findIndex(item => item.id === data.id);
+          if (existingIndex >= 0) {
+            this.state.bloggers[existingIndex] = data;
+          } else {
+            data.id = uid("blogger");
+            data.createdAt = now;
+            this.state.bloggers.push(data);
+            this.state.pipelines.push({
+              id: uid("pipeline"),
+              bloggerId: data.id,
+              steps: createSteps(0)
+            });
+          }
+          if (data.stage === "已签") this.markPipelineStep(data.id, 5, "从博主资料标记已签");
+          this.closeBloggerForm(true);
+        },
+        deleteBlogger(id) {
+          if (!confirm("确认删除这个博主及其排期、流程、复盘？")) return;
+          this.state.bloggers = this.state.bloggers.filter(item => item.id !== id);
+          this.state.schedules = this.state.schedules.filter(item => item.bloggerId !== id);
+          this.state.pipelines = this.state.pipelines.filter(item => item.bloggerId !== id);
+          this.state.debriefs = this.state.debriefs.filter(item => item.bloggerId !== id);
+          this.closeBloggerForm(true);
+        },
+        toggleStep(pipeline, step) {
+          this.quickTogglePipelineStep(pipeline, step);
+        },
+        daysSince(iso) {
+          if (!iso) return 0;
+          return (new Date() - new Date(iso)) / 864e5;
+        },
+        isStepOverdue(bloggerId, step) {
+          if (step.done) return false;
+          const pipeline = this.bloggerPipeline(bloggerId);
+          if (!pipeline) return false;
+          const step3 = pipeline.steps.find(item => item.step === 3);
+          const step5 = pipeline.steps.find(item => item.step === 5);
+
+          if (step.step === 4 && step3?.done && this.daysSince(step3.doneAt) >= 3) return true;
+          if (step.step === 9) {
+            const completedSchedule = this.state.schedules
+              .filter(item => item.bloggerId === bloggerId && ["talked", "completed"].includes(item.status))
+              .sort((a, b) => b.date.localeCompare(a.date))[0];
+            if (!completedSchedule) return false;
+            const completedAt = new Date(`${completedSchedule.date}T${completedSchedule.timeSlot}:00`);
+            return (new Date() - completedAt) / 36e5 >= 24;
+          }
+          if (step.step === 10 && step5?.done && this.daysSince(step5.doneAt) >= 30) return true;
+          return false;
+        },
+        formatDateTime(iso) {
+          if (!iso) return "";
+          const date = new Date(iso);
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          const hour = String(date.getHours()).padStart(2, "0");
+          const minute = String(date.getMinutes()).padStart(2, "0");
+          return `${month}-${day} ${hour}:${minute}`;
+        },
+        makeDebriefSuggestions(feeling, intentChange) {
+          if (feeling === "很顺利" && intentChange === "明确想签") {
+            return ["今天就发合同", "明天上午跟进是否收到", "3天内确认签署"];
+          }
+          if (feeling === "有阻力" && intentChange === "还在犹豫") {
+            return ["明天发一条轻松的消息保持联系", "整理一份他顾虑点的解答方案", "3天后再约一次简短通话"];
+          }
+          if (intentChange === "明确拒绝") {
+            return ["礼貌收尾", "标记为3个月后再联系", "更新状态为已拒"];
+          }
+          if (feeling === "基本没戏") {
+            return ["降低跟进频率", "保留关键顾虑", "后续用轻量案例再触达"];
+          }
+          return ["补充对方最关心的一个证据", "24小时内给出明确下一步", "把承诺写入流程备注"];
+        },
+        toggleDebriefSuggestion(item) {
+          if (this.debriefSuggestionDone.includes(item)) {
+            this.debriefSuggestionDone = this.debriefSuggestionDone.filter(target => target !== item);
+          } else {
+            this.debriefSuggestionDone.push(item);
+          }
+        },
+        submitDebrief() {
+          if (!this.debriefForm.bloggerId) return;
+          const record = {
+            id: uid("debrief"),
+            ...this.debriefForm,
+            followUpStatus: "active",
+            followUpCompletedAt: "",
+            archived: false,
+            suggestions: this.debriefSuggestions
+          };
+          this.state.debriefs.push(record);
+          const blogger = this.getBlogger(record.bloggerId);
+          if (blogger) {
+            if (record.concerns) blogger.concerns = record.concerns;
+            if (record.nextAction) blogger.nextAction = record.nextAction;
+            if (record.followUpDate) blogger.followUpDate = record.followUpDate;
+            if (record.nextAction || record.followUpDate) this.resetFollowUpStatus(blogger);
+            if (record.intentChange === "明确拒绝") {
+              blogger.stage = "已拒";
+              blogger.intent = "拒绝";
+            } else if (record.intentChange === "明确想签") {
+              blogger.stage = "谈判中";
+              blogger.intent = blogger.intent === "未确认" ? "全约" : blogger.intent;
+            } else if (blogger.stage === "已约") {
+              blogger.stage = "已聊";
+            }
+            blogger.updatedAt = new Date().toISOString();
+          }
+          const pipeline = this.bloggerPipeline(record.bloggerId);
+          if (pipeline) {
+            const first = pipeline.steps.find(step => step.step === 1);
+            if (first && !first.done) {
+              first.done = true;
+              first.doneAt = new Date().toISOString();
+            }
+          }
+          const currentDate = toDateInput(new Date());
+          this.debriefForm = {
+            bloggerId: record.bloggerId,
+            date: currentDate,
+            feeling: "一般",
+            intentChange: "还在犹豫",
+            concerns: "",
+            promises: "",
+            nextAction: "",
+            followUpDate: toDateInput(addDays(new Date(), 1)),
+            quotes: ""
+          };
+          this.debriefSuggestionDone = [];
+        },
+        applyAdvisorBlogger(id) {
+          const blogger = this.getBlogger(id);
+          if (!blogger) return;
+          this.selectedAdvisorBloggerId = id;
+          this.advisorInput = {
+            name: blogger.name,
+            size: blogger.size,
+            intent: blogger.intent === "拒绝" ? "未确认" : blogger.intent,
+            field: blogger.field || "其他",
+            performance: blogger.notes || ""
+          };
+        },
+        saveAdvisorAsAction() {
+          const blogger = this.getBlogger(this.selectedAdvisorBloggerId);
+          if (!blogger) return;
+          blogger.nextAction = `按策略沟通：${this.advisorResult.focus}`;
+          blogger.followUpDate = toDateInput(new Date());
+          this.resetFollowUpStatus(blogger);
+          blogger.updatedAt = new Date().toISOString();
+          this.activeView = "dashboard";
+        },
+        parseBulkImport() {
+          const rows = this.bulkImportText
+            .split(/\n+/)
+            .map(line => line.trim())
+            .filter(Boolean)
+            .map(line => {
+              const parts = line.split(/[,，]/).map(part => part.trim()).filter(Boolean);
+              const name = parts[0] || "";
+              const rawPlatforms = parts[1] || "小红书";
+              const size = sizes.includes(parts[2]) ? parts[2] : "小博主";
+              const platform = rawPlatforms
+                .split(/[\/、|]/)
+                .map(item => item.trim())
+                .filter(item => platforms.includes(item));
+              const exists = this.state.bloggers.some(blogger => blogger.name === name);
+              return {
+                name,
+                platform: platform.length ? platform : ["小红书"],
+                size,
+                valid: !!name && !exists,
+                error: !name ? "缺少名称" : exists ? "已存在" : ""
+              };
+            });
+          this.bulkImportPreview = rows;
+          const validCount = rows.filter(row => row.valid).length;
+          this.bulkImportMessage = `解析到 ${rows.length} 行，可创建 ${validCount} 个。`;
+        },
+        confirmBulkImport() {
+          const validRows = this.bulkImportPreview.filter(row => row.valid);
+          if (!validRows.length) {
+            this.bulkImportMessage = "没有可创建的博主。";
+            return;
+          }
+          const now = new Date().toISOString();
+          validRows.forEach(row => {
+            const blogger = {
+              ...this.emptyBloggerForm(),
+              id: uid("blogger"),
+              name: row.name,
+              platform: row.platform,
+              size: row.size,
+              createdAt: now,
+              updatedAt: now
+            };
+            this.state.bloggers.push(blogger);
+            this.state.pipelines.push({
+              id: uid("pipeline"),
+              bloggerId: blogger.id,
+              steps: createSteps(0)
+            });
+          });
+          this.bulkImportMessage = `已创建 ${validRows.length} 个博主。`;
+          this.bulkImportPreview = [];
+          this.bulkImportText = "";
+        },
+        fillImportExample() {
+          this.bulkImportText = "小A, 小红书, 小博主\n大B, B站/小红书, 中博主\nC姐, 抖音, 大博主";
+          this.parseBulkImport();
+        },
+        exportBackup() {
+          const blob = new Blob([JSON.stringify(this.state, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `signflow-backup-${toDateInput(new Date())}.json`;
+          link.click();
+          URL.revokeObjectURL(url);
+        },
+        restoreBackup() {
+          try {
+            const parsed = JSON.parse(this.restoreText);
+            if (!parsed.bloggers || !parsed.schedules || !parsed.pipelines || !parsed.debriefs) {
+              this.bulkImportMessage = "备份格式不完整。";
+              return;
+            }
+            this.state = parsed;
+            this.ensureBloggerDefaults();
+            this.ensureDebriefDefaults();
+            this.ensurePipelines();
+            this.restoreText = "";
+            this.bulkImportMessage = "备份已恢复。";
+          } catch (error) {
+            this.bulkImportMessage = "JSON 解析失败，请检查备份内容。";
+          }
+        },
+        jumpToReminder(reminder) {
+          if (reminder.type === "blogger" || reminder.type === "schedule") {
+            const blogger = this.getBlogger(reminder.bloggerId);
+            if (blogger) this.openBloggerForm(blogger);
+            return;
+          }
+          this.selectedPipelineBloggerId = reminder.bloggerId;
+          this.activeView = "pipeline";
+        }
+      }
+    }).mount("#app");
+  </script>
+</body>
+</html>
