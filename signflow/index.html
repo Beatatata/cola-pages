@@ -2859,10 +2859,13 @@
         this.ensurePipelines();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
         this.refreshIcons();
-        // Cloud sync: load from server if logged in
+        // Cloud sync: smart merge - local wins if richer
         if (SyncLayer.isLoggedIn()) {
           SyncLayer.fetchState().then(cloudData => {
-            if (cloudData && cloudData.bloggers) {
+            const localCount = (this.state.bloggers || []).length;
+            const cloudCount = (cloudData && cloudData.bloggers) ? cloudData.bloggers.length : 0;
+            if (cloudData && cloudData.bloggers && cloudCount > localCount) {
+              // Cloud has more data, use cloud
               this._skipSync = true;
               this.state = cloudData;
               this.ensureBloggerDefaults();
@@ -2871,7 +2874,7 @@
               localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
               this.$nextTick(() => { this._skipSync = false; this.refreshIcons(); });
             } else {
-              // First time login: push local data to cloud
+              // Local has same or more data, push local to cloud
               SyncLayer.pushState(this.state);
             }
           });
