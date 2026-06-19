@@ -2002,6 +2002,13 @@
     const API_BASE = "https://cola-dispatch.marswave-543.workers.dev/signflow-api-91481e";
     const AUTH_TOKEN_KEY = "signflow.auth.token";
 
+    // Timeout wrapper for fetch
+    function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+    }
+
     const SyncLayer = {
       token: localStorage.getItem(AUTH_TOKEN_KEY) || null,
       syncing: false,
@@ -2011,35 +2018,45 @@
 
       async login(email, password) {
         try {
-          const res = await fetch(`${API_BASE}/api/_auth/login`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({email, password}) });
+          const res = await fetchWithTimeout(`${API_BASE}/api/_auth/login`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({email, password}) });
           const data = await res.json();
           if (data.ok && data.token) { this.token = data.token; localStorage.setItem(AUTH_TOKEN_KEY, data.token); return {ok:true}; }
           return {ok:false, error: data.error || '登录失败'};
-        } catch(e) { return {ok:false, error: '网络连接失败，请检查网络'}; }
+        } catch(e) {
+          if (e.name === 'AbortError') return {ok:false, error: 'API连接超时，请点击「跳过登录」使用本地模式', timeout: true};
+          return {ok:false, error: '网络连接失败，请点击「跳过登录」使用本地模式'};
+        }
       },
 
       async register(email, password, name) {
         try {
-          const res = await fetch(`${API_BASE}/api/_auth/register`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({email, password, name}) });
+          const res = await fetchWithTimeout(`${API_BASE}/api/_auth/register`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({email, password, name}) });
           const data = await res.json();
           if (data.ok && data.token) { this.token = data.token; localStorage.setItem(AUTH_TOKEN_KEY, data.token); return {ok:true}; }
           return {ok:false, error: data.error || '注册失败'};
-        } catch(e) { return {ok:false, error: '网络连接失败，请检查网络'}; }
+        } catch(e) {
+          if (e.name === 'AbortError') return {ok:false, error: 'API连接超时，请点击「跳过登录」使用本地模式', timeout: true};
+          return {ok:false, error: '网络连接失败，请点击「跳过登录」使用本地模式'};
+        }
       },
 
       async checkSession() {
         if (!this.token) return false;
         try {
-          const res = await fetch(`${API_BASE}/api/_auth/me`, { headers: {'Authorization': `Bearer ${this.token}`} });
+          const res = await fetchWithTimeout(`${API_BASE}/api/_auth/me`, { headers: {'Authorization': `Bearer ${this.token}`} }, 5000);
+          if (res.status === 401) { this.logout(); return false; }
           const data = await res.json();
           return data.ok;
-        } catch(e) { return false; }
+        } catch(e) {
+          // Network error or timeout — don't invalidate local session
+          return true;
+        }
       },
 
       async fetchState() {
         if (!this.token) return null;
         try {
-          const res = await fetch(`${API_BASE}/api/state`, { headers: {'Authorization': `Bearer ${this.token}`} });
+          const res = await fetchWithTimeout(`${API_BASE}/api/state`, { headers: {'Authorization': `Bearer ${this.token}`} }, 8000);
           const data = await res.json();
           return data.ok ? data.data : null;
         } catch(e) { return null; }
@@ -2059,7 +2076,7 @@
       async fetchAdvisor() {
         if (!this.token) return null;
         try {
-          const res = await fetch(`${API_BASE}/api/advisor`, { headers: {'Authorization': `Bearer ${this.token}`} });
+          const res = await fetchWithTimeout(`${API_BASE}/api/advisor`, { headers: {'Authorization': `Bearer ${this.token}`} }, 8000);
           const data = await res.json();
           return data.ok ? data.data : null;
         } catch(e) { return null; }
@@ -2083,24 +2100,30 @@
       if (!SyncLayer.isLoggedIn()) {
         overlay.style.display = 'block';
       } else {
+        // If we have a local token, let user in immediately.
+        // Check session in background; only force re-login if API explicitly rejects (401).
         SyncLayer.checkSession().then(valid => {
-          if (!valid) { SyncLayer.logout(); overlay.style.display = 'block'; }
+          // valid=false could mean network issue — don't kick user out
+          // Only logout if we got an explicit rejection (handled inside checkSession)
         });
       }
 
       document.getElementById('auth-login-btn').onclick = async () => {
+        const btn = document.getElementById('auth-login-btn');
         try {
           hideError();
           const email = document.getElementById('auth-email').value.trim();
           const password = document.getElementById('auth-password').value;
           if (!email || !password) { showError('请填写邮箱和密码'); return; }
+          btn.textContent = '登录中...'; btn.disabled = true; btn.style.opacity = '0.6';
           const result = await SyncLayer.login(email, password);
           if (result.ok) { overlay.style.display = 'none'; window.location.reload(); }
-          else showError(result.error);
-        } catch(e) { showError('登录出错: ' + e.message); }
+          else { showError(result.error); btn.textContent = '登录'; btn.disabled = false; btn.style.opacity = '1'; }
+        } catch(e) { showError('登录出错: ' + e.message); btn.textContent = '登录'; btn.disabled = false; btn.style.opacity = '1'; }
       };
 
       document.getElementById('auth-register-btn').onclick = async () => {
+        const btn = document.getElementById('auth-register-btn');
         try {
           hideError();
           const email = document.getElementById('auth-email').value.trim();
@@ -2108,10 +2131,11 @@
           const name = document.getElementById('auth-name').value.trim() || 'User';
           if (!email || !password) { showError('请填写邮箱和密码'); return; }
           if (password.length < 6) { showError('密码至少6位'); return; }
+          btn.textContent = '注册中...'; btn.disabled = true; btn.style.opacity = '0.6';
           const result = await SyncLayer.register(email, password, name);
           if (result.ok) { overlay.style.display = 'none'; window.location.reload(); }
-          else showError(result.error);
-        } catch(e) { showError('注册出错: ' + e.message); }
+          else { showError(result.error); btn.textContent = '注册'; btn.disabled = false; btn.style.opacity = '1'; }
+        } catch(e) { showError('注册出错: ' + e.message); btn.textContent = '注册'; btn.disabled = false; btn.style.opacity = '1'; }
       };
 
       document.getElementById('auth-skip').onclick = (e) => {
